@@ -15,3 +15,10 @@ The script will download virtual box and vagrant.
 It will then deploy Ubuntu17.04 VM and start updating and upgrading it. It'll then start to automatically install the softwares as specified in the provision script under vm_provision.
 
 Note: It fails at the end because the dependency are not installed and we cannot interact with the setup.
+
+Basic Commands:
+
+vagrant ssh (To login into the vm)
+vagrant destroy <ID> (To destroy the VM)
+vagrant box remove <VM_NAME> (To remove the VM)
+vagrant box list (To list all the VMs)
