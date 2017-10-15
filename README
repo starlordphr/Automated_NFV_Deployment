@@ -1,0 +1,17 @@
+This project aims to deploy NFV components automatically on different VMs.
+
+TODO:
+The provision script currently fails to patch eNB and it also fails to build 3rd party software as they require interaction.
+
+SOLUTION:
+We can download all the 3rd party dependency beforehand and run the build without "-i" flag afterwards.
+This will allow the 3rd party integrations to get installed without user interaction.
+
+For the eNB patching error, I have left a comment on the blog post and hopefully we will get a respone.
+
+HOW DOES IT WORK:
+cd into this directory and run setup.sh script.
+The script will download virtual box and vagrant.
+It will then deploy Ubuntu17.04 VM and start updating and upgrading it. It'll then start to automatically install the softwares as specified in the provision script under vm_provision.
+
+Note: It fails at the end because the dependency are not installed and we cannot interact with the setup.
