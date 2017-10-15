@@ -2,6 +2,9 @@
 
 # Intended for Ubuntu 17.04 (Trusty)
 
+# If any of the commands fails, exit the script
+set -e
+
 # Update Ubuntu
 echo "----- Provision: Updating apt & Upgrading..."
 apt-get update
