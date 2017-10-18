@@ -32,21 +32,24 @@ keystone-manage bootstrap --bootstrap-password himitsu \
   --bootstrap-region-id RegionOne
 
 # Configure the Apache HTTP server
-echo "----- Configuring the Apache HTTP server"
+echo "----- Configuring the Apache HTTP server..."
 sudo echo "ServerName controller" >> /etc/apache2/apache2.conf
 # Finalize the installation
-echo "----- Restarting the Apache service"
+echo "----- Restarting the Apache service..."
 service apache2 restart
+
 # Setting up a minimal set of environment variables for authentication
-export OS_IDENTITY_API_VERSION=3
-#export OS_AUTH_URL=http://localhost:5000/v3
-export OS_AUTH_URL=http://controller:35357/v3
-export OS_DEFAULT_DOMAIN=default
-export OS_USERNAME=admin
-export OS_PASSWORD=himitsu
-export OS_PROJECT_NAME=admin
-export OS_USER_DOMAIN_NAME=default
-export OS_PROJECT_DOMAIN_NAME=default
+echo "----- Openstack: Configuring authentication..."
+echo "export OS_IDENTITY_API_VERSION=3" >> ~/.bashrc
+#echo "export OS_AUTH_URL=http://localhost:5000/v3" >> ~/.bashrc
+echo "export OS_AUTH_URL=http://controller:35357/v3" >> ~/.bashrc
+echo "export OS_DEFAULT_DOMAIN=default" >> ~/.bashrc
+echo "export OS_USERNAME=admin" >> ~/.bashrc
+echo "export OS_PASSWORD=himitsu" >> ~/.bashrc
+echo "export OS_PROJECT_NAME=admin" >> ~/.bashrc
+echo "export OS_USER_DOMAIN_NAME=default" >> ~/.bashrc
+echo "export OS_PROJECT_DOMAIN_NAME=default" >> ~/.bashrc
+source ~/.bashrc
 
 # Download and install python-openstackclient
 echo "----- Openstack: Downloading OpenStack client..."
