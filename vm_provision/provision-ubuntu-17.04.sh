@@ -22,14 +22,14 @@ git config --global user.name "starlordphr"
 git config --global user.email "prashanthrajput@ucla.edu"
 
 #Install expect
-sudo apt-get -y install expect
+#sudo apt-get -y install expect
 
 # Add the OAI repository as authorized remote system
 #echo "----- Provision: Adding the OAI repository as authorized remote system..."
-echo -n | openssl s_client -showcerts -connect gitlab.eurecom.fr:443 2>/dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-certificates.crt
+#echo -n | openssl s_client -showcerts -connect gitlab.eurecom.fr:443 2>/dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-certificates.crt
 
 # Install USRP drivers
-#echo "----- Provision: Installing USRP drivers..."
+echo "----- Provision: Installing USRP drivers..."
 sudo apt-get -y install libboost-all-dev libusb-1.0-0-dev python-mako doxygen python-docutils python-requests cmake build-essential
 git clone git://github.com/EttusResearch/uhd.git
 cd uhd; mkdir host/build; cd host/build
@@ -42,8 +42,8 @@ sudo /usr/lib/uhd/utils/uhd_images_downloader.py
 # Download & Extract Patches
 echo "----- Provision: Downloading & Extracting Patches..."
 cd /home/vagrant
-wget https://open-cells.com/d5138782a8739209ec5760865b1e53b0/opencells-mods-20170710.tgz
-tar xf opencells-mods-20170710.tgz
+wget https://open-cells.com/d5138782a8739209ec5760865b1e53b0/opencells-mods-20170823.tgz
+tar xf opencells-mods-20170823.tgz
 
 # Download & Compile the eNB on 17.04
 echo "----- Provision: Downloading & Compiling eNB..."
@@ -52,16 +52,16 @@ cd openairinterface5g
 git checkout develop
 
 # Apply downloaded Patch
-#echo "----- Provision: Patching eNB..."
+echo "----- Provision: Patching eNB..."
 # IMPORTANT: This patch fails and all the further setups fail as they are interactive
 # Unlike apt I cannot pass -y as a flag to hss, mme and spgw 
 # TODO: Find a solution to this
-#git apply /home/vagrant/opencells-mods/eNB.patch
-#cp /home/vagrant/opencells-mods/build/tools/build_helper cmake_targets/tools/build_helper
+cp /home/vagrant/opencells-mods/cmake_targets/tools/build_helper cmake_targets/tools/build_helper
 
-#source oaienv
-#yes | ./cmake_targets/build_oai -I
-#./cmake_targets/build_oai  -w USRP --eNB --UE
+source oaienv  
+./cmake_targets/build_oai -I       # install SW packages from internet
+#./cmake_targets/build_oai  -w USRP --eNB --UE # compile eNB
+./cmake_targets/build_oai  -w USRP --eNB # compile eNB
 
 # Clone OAI EPC
 echo "----- Provision: Cloning OAI EPC..."
@@ -78,9 +78,9 @@ git apply /home/vagrant/opencells-mods/EPC.patch
 echo "----- Provision: Installing third party SW for EPC..."
 source oaienv
 cd scripts
-yes | ./build_hss -i  #Semi-Automatic
-yes | ./build_mme -i  #Semi-Automatic
-yes | ./build_spgw -i #Semi-Automatic
+./build_hss -i  #Semi-Automatic
+./build_mme -i  #Semi-Automatic
+./build_spgw -i #Semi-Automatic
 
 ./build_hss
 ./build_mme
