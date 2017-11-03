@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Tutorial:
+# https://docs.openstack.org/install-guide/
+# May just make use of DevStack to install stuff needed:
+# https://docs.openstack.org/devstack/latest/
+
 # If any of the commands fails, exit the script
 set -e
 
