@@ -8,6 +8,8 @@ $ sudo python ui.py
 import os, select, time
 from utils import *
 
+BUF_SIZE = 65536
+
 toshell_read, toshell_write = os.pipe()
 fromshell_read, fromshell_write = os.pipe()
 polling_pool = None
@@ -44,9 +46,9 @@ def main():
 	# wait for child process to start...
 	time.sleep(0.5)
 
-	demo()
-	# init()
-	# demo_parse_table()
+	# demo()
+	init()
+	demo_parse_table()
 
 	# while True:
 	# 	user_input = raw_input()
@@ -55,7 +57,8 @@ def give_command(cmd):
 	nbytes = os.write(toshell_write, '%s\n' % cmd)
 	return nbytes
 
-def init():
+def init(timeout=5000):
+	print "Initialzing UI..."
 	cmd_seq = [
 		'sudo su - stack',
 		'cd devstack',
@@ -63,6 +66,10 @@ def init():
 	]
 	for cmd in cmd_seq:
 		give_command(cmd)
+	
+	for fd, event in polling_pool.poll(timeout):
+		output = os.read(fd, BUF_SIZE)
+		print output
 
 def demo():
 	demo_cmds = ['sudo su - stack', 'whoami', 'cd devstack', 'ls']
@@ -71,7 +78,7 @@ def demo():
 		has_output = False
 		for fd, event in polling_pool.poll(100):
 			has_output = True
-			output = os.read(fd, 4096)
+			output = os.read(fd, BUF_SIZE)
 			print "Command '%s' gives output:" % cmd
 			print output
 		if not has_output:
@@ -79,7 +86,7 @@ def demo():
 
 def demo_parse_table():
 	give_command('openstack flavor list')
-	output = os.read(fromshell_read, 65536)
+	output = os.read(fromshell_read, BUF_SIZE)
 	print "Received output:"
 	print output
 	print "Parsed object:"
