@@ -64,12 +64,16 @@ def parse_openstack_table(s):
 		col_names = numpy.array(col_names).transpose()
 		for idx, name in col_names:
 			col_names[idx] = ' '.join(name)
-	else:
-		# naturally throw an error if it's empty
+	elif len(col_names) == 1:
 		col_names = col_names[0]
+	else:
+		# Assumes incorrect input
+		return None
 
 	ret = []
 	for row in col_vals:
+		if len(col_names) != len(row):
+			return None
 		entry = {}
 		for idx, val in enumerate(row):
 			# as for now we don't eval

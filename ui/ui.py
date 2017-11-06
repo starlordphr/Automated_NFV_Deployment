@@ -51,6 +51,7 @@ def main():
 	demo_parse_table()
 
 	# while True:
+	# 	print '$',
 	# 	user_input = raw_input()
 
 def give_command(cmd):
