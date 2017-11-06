@@ -6,6 +6,7 @@ $ sudo python ui.py
 '''
 
 import os, select, time
+from utils import *
 
 toshell_read, toshell_write = os.pipe()
 fromshell_read, fromshell_write = os.pipe()
@@ -44,6 +45,8 @@ def main():
 	time.sleep(0.5)
 
 	demo()
+	# init()
+	# demo_parse_table()
 
 	# while True:
 	# 	user_input = raw_input()
@@ -51,6 +54,15 @@ def main():
 def give_command(cmd):
 	nbytes = os.write(toshell_write, '%s\n' % cmd)
 	return nbytes
+
+def init():
+	cmd_seq = [
+		'sudo su - stack',
+		'cd devstack',
+		'source openrc'
+	]
+	for cmd in cmd_seq:
+		give_command(cmd)
 
 def demo():
 	demo_cmds = ['sudo su - stack', 'whoami', 'cd devstack', 'ls']
@@ -64,6 +76,14 @@ def demo():
 			print output
 		if not has_output:
 			print "Command '%s' gives no output..." % cmd
+
+def demo_parse_table():
+	give_command('openstack flavor list')
+	output = os.read(fromshell_read, 65536)
+	print "Received output:"
+	print output
+	print "Parsed object:"
+	print parse_openstack_table(output)
 
 if __name__ == '__main__':
 	main()
