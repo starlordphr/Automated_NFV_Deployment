@@ -14,6 +14,8 @@ toshell_read, toshell_write = os.pipe()
 fromshell_read, fromshell_write = os.pipe()
 polling_pool = None
 
+# TODO: maybe set up another thread for polling output
+
 def main():
 	global polling_pool
 	
@@ -58,6 +60,38 @@ def give_command(cmd):
 	nbytes = os.write(toshell_write, '%s\n' % cmd)
 	return nbytes
 
+def poll_output(timeout=5000):
+	for fd, event in polling_pool.poll(timeout):
+		output = os.read(fd, BUF_SIZE)
+		return output
+	return ""
+
+def get_returncode():
+	clear_historical_outputs()
+	give_command("echo $?")
+	output = poll_output(timeout=1000)
+	return int(output)
+
+# timeout will be at least how long we will have to wait
+def poll_all_outputs(timeout=5000):
+	has_output = True
+	historical_output = ""
+	while has_output:
+		has_output = False
+		output = poll_output(timeout)
+		if len(output) > 0:
+			has_output = True
+			if len(historical_output) == 0:
+				historical_output = output
+			else:
+				historical_output += "\n%s" % output
+	return historical_output
+
+def clear_historical_outputs():
+	# Assumes historical outputs are ready to send
+	# on child's stdout or stderr
+	return poll_all_outputs(100)
+
 def init(timeout=5000):
 	print "Initialzing UI..."
 	cmd_seq = [
@@ -68,9 +102,8 @@ def init(timeout=5000):
 	for cmd in cmd_seq:
 		give_command(cmd)
 	
-	for fd, event in polling_pool.poll(timeout):
-		output = os.read(fd, BUF_SIZE)
-		print output
+	print poll_output()
+	# print "Return code: %d" % get_returncode()
 
 def demo():
 	demo_cmds = ['sudo su - stack', 'whoami', 'cd devstack', 'ls']
