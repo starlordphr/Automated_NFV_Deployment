@@ -8,6 +8,10 @@ $ sudo python ui.py
 import os, select, time
 from utils import *
 
+################
+## child bash ##
+################
+
 BUF_SIZE = 65536
 
 toshell_read, toshell_write = os.pipe()
@@ -15,6 +19,26 @@ fromshell_read, fromshell_write = os.pipe()
 polling_pool = None
 
 # TODO: maybe set up another thread for polling output
+
+#############
+## console ##
+#############
+
+commands = {
+	"help" : {
+		"description" : "Show help message",
+		"func_name" : "show_help"
+	},
+	"exit" : {
+		"description" : "Exit console",
+		"func_name" : "exit_console"
+	},
+	"demo" : {
+		"description" : "Demonostrate parsing a table",
+		"func_name" : "demo_parse_table"
+	}
+}
+console_running = True
 
 def main():
 	global polling_pool
@@ -50,11 +74,18 @@ def main():
 
 	# demo()
 	init()
-	demo_parse_table()
+	# demo_parse_table()
 
-	# while True:
-	# 	print '$',
-	# 	user_input = raw_input()
+	while console_running:
+		print '$',
+		user_input = raw_input()
+		func = _get_cmd_func(user_input)
+		if func != None:
+			func()
+
+###########################
+## child bash comm funcs ##
+###########################
 
 def give_command(cmd):
 	nbytes = os.write(toshell_write, '%s\n' % cmd)
@@ -87,12 +118,37 @@ def poll_all_outputs(timeout=5000):
 				historical_output += "\n%s" % output
 	return historical_output
 
+# just swiftly poll all outputs
 def clear_historical_outputs():
 	# Assumes historical outputs are ready to send
 	# on child's stdout or stderr
 	return poll_all_outputs(100)
 
-def init(timeout=5000):
+###############################
+## console interaction funcs ##
+###############################
+
+def show_help():
+	for opt in commands:
+		print "%-16s%s" % (opt, commands[opt]['description'])
+
+def exit_console():
+	global console_running
+	console_running = False
+	# waitpid?
+
+def _get_cmd_func(cmd):
+	if type(cmd) != str or cmd not in commands:
+		print "%s: command not found" % cmd
+		return None
+	else:
+		return globals().get(commands[cmd]['func_name'])
+
+##############
+## ui funcs ##
+##############
+
+def init():
 	print "Initialzing UI..."
 	cmd_seq = [
 		'sudo su - stack',
@@ -119,12 +175,18 @@ def demo():
 			print "Command '%s' gives no output..." % cmd
 
 def demo_parse_table():
+	print "Command: openstack flavor list"
+	print "Waiting for response..."
 	give_command('openstack flavor list')
 	output = os.read(fromshell_read, BUF_SIZE)
 	print "Received output:"
 	print output
 	print "Parsed object:"
 	print parse_openstack_table(output)
+
+##########
+## main ##
+##########
 
 if __name__ == '__main__':
 	main()
