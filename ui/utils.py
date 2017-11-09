@@ -1,4 +1,4 @@
-import re, string, numpy
+import re, string, numpy, json
 
 def _is_empty(obj):
 	return obj == None or len(obj) == 0
@@ -83,3 +83,6 @@ def parse_openstack_table(s):
 		ret.append(entry)
 
 	return ret
+
+def format_dict(obj):
+	return json.dumps(obj, indent=2)

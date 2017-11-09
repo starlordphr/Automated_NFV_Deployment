@@ -2,7 +2,9 @@
 Assuming setup is done, use this program to automate certain processes
 and interact with user.
 Usage:
-$ sudo python ui.py
+$ sudo python ui.py <args>
+Arguments:
+
 '''
 
 import os, select, time, argparse
@@ -18,7 +20,7 @@ toshell_read, toshell_write = os.pipe()
 fromshell_read, fromshell_write = os.pipe()
 polling_pool = None
 
-# TODO: maybe set up another thread for polling output
+# TODO: maybe set up another thread for polling output??
 
 #############
 ## console ##
@@ -32,6 +34,10 @@ commands = {
 	"exit" : {
 		"description" : "Exit console",
 		"func_name" : "exit_console"
+	},
+	"conf" : {
+		"description" : "Print current configuration (parsed to json format)",
+		"func_name" : "show_config"
 	},
 	"demo" : {
 		"description" : "Demonostrate parsing a table",
@@ -53,7 +59,7 @@ def main():
 	# fork child bash
 	pid = os.fork()
 	if pid < 0:
-		raise Exception("fork failed")
+		raise RuntimeError("fork failed")
 
 	if pid == 0:
 		# child process
@@ -112,6 +118,9 @@ def poll_output(timeout=5000):
 	for fd, event in polling_pool.poll(timeout):
 		output = os.read(fd, BUF_SIZE)
 		return output
+
+	# TODO: add waitpid to see if child exits due to error
+
 	return ""
 
 def get_returncode():
@@ -154,6 +163,9 @@ def exit_console(args):
 	console_running = False
 	# waitpid?
 
+def show_config(args):
+	print utils.format_dict(configs.sla_configs)
+
 ###########################
 ## console backend funcs ##
 ###########################
@@ -162,7 +174,7 @@ def parse_args():
 	# parse args
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--sla', action='store', required=True,
-		help='specify SLA config file')
+		metavar='SLA_config_file', help='specify SLA config file')
 	args = parser.parse_args()
 	return args
 

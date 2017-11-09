@@ -1,13 +1,5 @@
 '''
 This script handles parsing SLA configurations for ui script to use
-
-A sample SLA config looks like:
-[meta]
-vm1 = server
-[vm1-deploy]
-# vm1's deployment configurations
-[vm1-oai]
-# vm1's OAI configurations
 '''
 
 # Tutorial at:
@@ -28,7 +20,7 @@ def parse_sla_config(fname):
 	_cfg.read(fname)
 
 	if not _cfg.has_section('meta'):
-		raise Exception("[configs.py] %s: config file missing 'meta' section!" % fname)
+		raise RuntimeError("[configs.py] %s: config file missing 'meta' section!" % fname)
 
 	for vm_name, vm_type in _cfg.items('meta'):
 		# get deployment configuration for vm
@@ -39,7 +31,7 @@ def parse_sla_config(fname):
 
 		sla_configs[vm_name] = {
 			"vm_type" : vm_type,
-			"deploy_config" : deploy_config
+			"deploy_config" : deploy_config,
 			"oai_config" : oai_config
 		}
 
@@ -55,11 +47,11 @@ def _try_get_option(sect, opt, data_type='str', optional=False):
 		elif data_type == 'bool' or data_type == 'boolean':
 			return _cfg.getboolean(sect, opt)
 		else:
-			raise Exception("[configs.py] %s: unrecognized data type spec" % data_type)
+			raise RuntimeError("[configs.py] %s: unrecognized data type spec" % data_type)
 	elif optional:
 		return None
 	else:
-		raise Exception("[configs.py] Section '%s' missing option '%s'!" % (sect, opt))
+		raise RuntimeError("[configs.py] Section '%s' missing option '%s'!" % (sect, opt))
 
 # returns (data_type, optional)
 def _opt_of_opt(opt):
@@ -97,4 +89,4 @@ def _get_deploy_config(vm_name, vm_type):
 	elif vm_type == 'some other type':
 		return None
 	else:
-		raise Exception("Unknown VM type in configuration: %s" % vm_type)
+		raise RuntimeError("Unknown VM type in configuration: %s" % vm_type)
