@@ -5,7 +5,8 @@ Usage:
 $ sudo python ui.py
 '''
 
-import os, select, time
+import os, select, time, argparse
+import configs
 from utils import *
 
 ################
@@ -42,6 +43,8 @@ console_running = True
 
 def main():
 	global polling_pool
+
+	process_args()
 	
 	pid = os.fork()
 	if pid < 0:
@@ -72,9 +75,7 @@ def main():
 	# wait for child process to start...
 	time.sleep(0.5)
 
-	# demo()
 	init()
-	# demo_parse_table()
 
 	while console_running:
 		print '$',
@@ -144,9 +145,19 @@ def _get_cmd_func(cmd):
 	else:
 		return globals().get(commands[cmd]['func_name'])
 
-##############
-## ui funcs ##
-##############
+##################################
+## console initialization funcs ##
+##################################
+
+def process_args():
+	# parse args
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--sla', action='store', required=True,
+		help='specify SLA config file')
+	args = parser.parse_args()
+
+	# initialize parameters by args
+	configs.parse_config(args.sla)
 
 def init():
 	print "Initialzing UI..."
