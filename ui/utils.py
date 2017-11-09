@@ -1,5 +1,20 @@
 import re, string, numpy, json
 
+# for printing with color / style
+class bcolors:
+	# colors
+	RED='\033[31m'
+	GREEN='\033[32m'
+	YELLOW='\033[33m'
+	CYAN='\033[36m'
+	NC='\033[0m' # No Color
+
+	# styles
+	BOLD = '\033[1m'
+	ITALIC = '\033[3m'
+	UNDERLINE = '\033[4m'
+	BLINK = '\033[5m'
+
 def _is_empty(obj):
 	return obj == None or len(obj) == 0
 

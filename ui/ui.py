@@ -20,6 +20,8 @@ toshell_read, toshell_write = os.pipe()
 fromshell_read, fromshell_write = os.pipe()
 polling_pool = None
 
+home_dir = ""
+
 # TODO: maybe set up another thread for polling output??
 
 #############
@@ -154,16 +156,16 @@ def clear_historical_outputs():
 ## console command funcs ##
 ###########################
 
-def show_help(args):
+def show_help(args=[]):
 	for opt in commands:
 		print "%-16s%s" % (opt, commands[opt]['description'])
 
-def exit_console(args):
+def exit_console(args=[]):
 	global console_running
 	console_running = False
 	# waitpid?
 
-def show_config(args):
+def show_config(args=[]):
 	print utils.format_dict(configs.sla_configs)
 
 ###########################
@@ -179,19 +181,40 @@ def parse_args():
 	return args
 
 def init():
-	print "Initialzing UI..."
-	cmd_seq = [
-		'sudo su - stack',
-		'cd devstack',
-		'source openrc'    # may have output
-	]
-	for cmd in cmd_seq:
-		give_command(cmd)
+	global home_dir
+	print "Initialzing console..."
 	
-	print poll_output(3000)
+	give_command('sudo su - stack')
+	give_command('pwd')
+	home_dir = poll_output(timeout=1000)
+	if len(home_dir) == 0:
+		print "[WARNING] Didn't get home directory!"
+	give_command('cd devstack')
+	give_command('source openrc')    # may have output
+	print poll_output(timeout=2000)
 
 def configure_deployment(vm_name, vm_type, deploy_config):
-	pass
+	if vm_type == "server":
+		# Step 1: Keypair
+		if deploy_config["KEY_NAME"] == None:
+			deploy_config["KEY_NAME"] = "%s_key" % deploy_config["INSTANCE_NAME"]
+		pass
+
+		# Step 2: Display keypair
+		pass
+
+		if deploy_config["SECURITY_GROUP_NAME"] != None:
+			# Step 3
+			pass
+		else:
+			# Step 4
+			pass
+
+		# Step 5: Parse netID
+		pass
+
+		# Step 6: Create instance
+		pass
 
 def configure_oai():
 	pass
@@ -202,6 +225,12 @@ def get_cmd_func(cmd):
 		return None
 	else:
 		return globals().get(commands[cmd]['func_name'])
+
+# returns None if given command doesn't return any output
+def get_table(cmd):
+	give_command(cmd)
+	output = poll_output(timeout=7500)
+	return utils.parse_openstack_table(output)
 
 ##########################
 ## console debug & demo ##
@@ -220,7 +249,7 @@ def demo():
 		if not has_output:
 			print "Command '%s' gives no output..." % cmd
 
-def demo_parse_table(args):
+def demo_parse_table(args=[]):
 	print "Command: openstack flavor list"
 	print "Waiting for response..."
 	give_command('openstack flavor list')

@@ -12,6 +12,17 @@ sla_configs = {}
 
 _cfg = None
 
+# constants
+
+SERVER_CONFIG = {
+	"FLAVOR_NAME" : "",
+	"IMAGE_NAME" : "",
+	"NETWORK_NAME" : "",
+	"SECURITY_GROUP_NAME" : "optional",
+	"KEY_NAME" : "optional",
+	"INSTANCE_NAME" : ""
+}
+
 def parse_sla_config(fname):
 	# global all constants
 	global _cfg, sla_configs
@@ -72,14 +83,7 @@ def _opt_of_opt(opt):
 def _get_deploy_config(vm_name, vm_type):
 	sect = '%s-deploy' % vm_name
 	if vm_type == 'server':
-		ret = {
-			"flavor" : "",
-			"image" : "",
-			"network_name" : "",
-			"security_group" : "",
-			"keyname" : "optional",
-			"instance_name" : ""
-		}
+		ret = dict(SERVER_CONFIG)
 
 		for opt in ret:
 			data_type, optional = _opt_of_opt(ret[opt])
