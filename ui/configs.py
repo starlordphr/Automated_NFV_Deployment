@@ -1,6 +1,13 @@
 '''
-This script handles parsing SLA configurations and
-feeding them to console (ui)
+This script handles parsing SLA configurations for ui script to use
+
+A sample SLA config looks like:
+[meta]
+vm1 = server
+[vm1-deploy]
+# vm1's deployment configurations
+[vm1-oai]
+# vm1's OAI configurations
 '''
 
 # Tutorial at:
@@ -9,8 +16,85 @@ feeding them to console (ui)
 import sys
 from ConfigParser import ConfigParser
 
-def parse_config(file):
-	# global all constants
+sla_configs = {}
 
-	cfg = ConfigParser()
-	cfg.read(file)
+_cfg = None
+
+def parse_sla_config(fname):
+	# global all constants
+	global _cfg, sla_configs
+
+	_cfg = ConfigParser()
+	_cfg.read(fname)
+
+	if not _cfg.has_section('meta'):
+		raise Exception("[configs.py] %s: config file missing 'meta' section!" % fname)
+
+	for vm_name, vm_type in _cfg.items('meta'):
+		# get deployment configuration for vm
+		deploy_config = _get_deploy_config(vm_name, vm_type)
+
+		# get oai configuration for vm
+		oai_config = None
+
+		sla_configs[vm_name] = {
+			"vm_type" : vm_type,
+			"deploy_config" : deploy_config
+			"oai_config" : oai_config
+		}
+
+def _try_get_option(sect, opt, data_type='str', optional=False):
+	data_type = data_type.lower()
+	if (_cfg.has_option(sect, opt)):
+		if data_type == 'str' or data_type == 'string':
+			return _cfg.get(sect, opt)
+		elif data_type == 'int' or data_type == 'integer':
+			return _cfg.getint(sect, opt)
+		elif data_type == 'float':
+			return _cfg.getfloat(sect, opt)
+		elif data_type == 'bool' or data_type == 'boolean':
+			return _cfg.getboolean(sect, opt)
+		else:
+			raise Exception("[configs.py] %s: unrecognized data type spec" % data_type)
+	elif optional:
+		return None
+	else:
+		raise Exception("[configs.py] Section '%s' missing option '%s'!" % (sect, opt))
+
+# returns (data_type, optional)
+def _opt_of_opt(opt):
+	# defaults
+	data_type = 'str'
+	optional = False
+
+	if type(opt) == str:
+		opt = opt.split()
+		optional = "optional" in opt
+		if optional:
+			opt.remove("optional")
+		if len(opt) > 0:
+			data_type = opt[0]
+	
+	return data_type, optional
+
+def _get_deploy_config(vm_name, vm_type):
+	sect = '%s-deploy' % vm_name
+	if vm_type == 'server':
+		ret = {
+			"flavor" : "",
+			"image" : "",
+			"network_name" : "",
+			"security_group" : "",
+			"keyname" : "optional",
+			"instance_name" : ""
+		}
+
+		for opt in ret:
+			data_type, optional = _opt_of_opt(ret[opt])
+			ret[opt] = _try_get_option(sect, opt, data_type, optional)
+
+		return ret
+	elif vm_type == 'some other type':
+		return None
+	else:
+		raise Exception("Unknown VM type in configuration: %s" % vm_type)

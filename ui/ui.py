@@ -6,8 +6,7 @@ $ sudo python ui.py
 '''
 
 import os, select, time, argparse
-import configs
-from utils import *
+import configs, utils
 
 ################
 ## child bash ##
@@ -44,8 +43,14 @@ console_running = True
 def main():
 	global polling_pool
 
-	process_args()
+	# parse args
+	args = parse_args()
+
+	# process args to intialize configs module
+	# will raise exception if input is ill-formatted
+	configs.parse_sla_config(args.sla)
 	
+	# fork child bash
 	pid = os.fork()
 	if pid < 0:
 		raise Exception("fork failed")
@@ -75,18 +80,29 @@ def main():
 	# wait for child process to start...
 	time.sleep(0.5)
 
+	# first commands to child bash
 	init()
 
+	# process according to SLA specification
+	for vm in configs.sla_configs:
+		cfg = configs.sla_configs[vm]
+		configure_deployment(vm, cfg['vm_type'], cfg['deploy_config'])
+
+	# user console
 	while console_running:
 		print '$',
-		user_input = raw_input()
-		func = _get_cmd_func(user_input)
-		if func != None:
-			func()
+		user_args = raw_input().split()
 
-###########################
-## child bash comm funcs ##
-###########################
+		if len(user_args) > 0:
+			cmd = user_args[0]
+			cmd_args = user_args[1:] if len(user_args) > 1 else []
+			func = get_cmd_func(cmd)
+			if func != None:
+				func(cmd_args)
+
+##############################
+## child bash communication ##
+##############################
 
 def give_command(cmd):
 	nbytes = os.write(toshell_write, '%s\n' % cmd)
@@ -105,7 +121,7 @@ def get_returncode():
 	return int(output)
 
 # timeout will be at least how long we will have to wait
-def poll_all_outputs(timeout=5000):
+def poll_all_outputs(timeout=2000):
 	has_output = True
 	historical_output = ""
 	while has_output:
@@ -125,52 +141,59 @@ def clear_historical_outputs():
 	# on child's stdout or stderr
 	return poll_all_outputs(100)
 
-###############################
-## console interaction funcs ##
-###############################
+###########################
+## console command funcs ##
+###########################
 
-def show_help():
+def show_help(args):
 	for opt in commands:
 		print "%-16s%s" % (opt, commands[opt]['description'])
 
-def exit_console():
+def exit_console(args):
 	global console_running
 	console_running = False
 	# waitpid?
 
-def _get_cmd_func(cmd):
-	if type(cmd) != str or cmd not in commands:
-		print "%s: command not found" % cmd
-		return None
-	else:
-		return globals().get(commands[cmd]['func_name'])
+###########################
+## console backend funcs ##
+###########################
 
-##################################
-## console initialization funcs ##
-##################################
-
-def process_args():
+def parse_args():
 	# parse args
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--sla', action='store', required=True,
 		help='specify SLA config file')
 	args = parser.parse_args()
-
-	# initialize parameters by args
-	configs.parse_config(args.sla)
+	return args
 
 def init():
 	print "Initialzing UI..."
 	cmd_seq = [
 		'sudo su - stack',
 		'cd devstack',
-		'source openrc'
+		'source openrc'    # may have output
 	]
 	for cmd in cmd_seq:
 		give_command(cmd)
 	
-	print poll_output()
-	# print "Return code: %d" % get_returncode()
+	print poll_output(3000)
+
+def configure_deployment(vm_name, vm_type, deploy_config):
+	pass
+
+def configure_oai():
+	pass
+
+def get_cmd_func(cmd):
+	if type(cmd) != str or cmd not in commands:
+		print "%s: command not found" % cmd
+		return None
+	else:
+		return globals().get(commands[cmd]['func_name'])
+
+##########################
+## console debug & demo ##
+##########################
 
 def demo():
 	demo_cmds = ['sudo su - stack', 'whoami', 'cd devstack', 'ls']
@@ -185,7 +208,7 @@ def demo():
 		if not has_output:
 			print "Command '%s' gives no output..." % cmd
 
-def demo_parse_table():
+def demo_parse_table(args):
 	print "Command: openstack flavor list"
 	print "Waiting for response..."
 	give_command('openstack flavor list')
@@ -193,7 +216,7 @@ def demo_parse_table():
 	print "Received output:"
 	print output
 	print "Parsed object:"
-	print parse_openstack_table(output)
+	print utils.parse_openstack_table(output)
 
 ##########
 ## main ##
