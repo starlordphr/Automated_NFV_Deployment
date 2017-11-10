@@ -92,6 +92,7 @@ def main():
 	init()
 
 	# process according to SLA specification
+	print "Processing SLA configuration..."
 	for vm in configs.sla_configs:
 		cfg = configs.sla_configs[vm]
 		configure_deployment(vm, cfg['vm_type'], cfg['deploy_config'])
@@ -132,7 +133,7 @@ def get_returncode():
 	return int(output)
 
 # timeout will be at least how long we will have to wait
-def poll_all_outputs(timeout=2000):
+def poll_all_outputs(timeout=3000):
 	has_output = True
 	historical_output = ""
 	while has_output:
@@ -193,32 +194,6 @@ def init():
 	give_command('source openrc')    # may have output
 	print poll_output(timeout=2000)
 
-def configure_deployment(vm_name, vm_type, deploy_config):
-	if vm_type == "server":
-		# Step 1: Keypair
-		if deploy_config["KEY_NAME"] == None:
-			deploy_config["KEY_NAME"] = "%s_key" % deploy_config["INSTANCE_NAME"]
-		pass
-
-		# Step 2: Display keypair
-		pass
-
-		if deploy_config["SECURITY_GROUP_NAME"] != None:
-			# Step 3
-			pass
-		else:
-			# Step 4
-			pass
-
-		# Step 5: Parse netID
-		pass
-
-		# Step 6: Create instance
-		pass
-
-def configure_oai():
-	pass
-
 def get_cmd_func(cmd):
 	if type(cmd) != str or cmd not in commands:
 		print "%s: command not found" % cmd
@@ -227,10 +202,76 @@ def get_cmd_func(cmd):
 		return globals().get(commands[cmd]['func_name'])
 
 # returns None if given command doesn't return any output
-def get_table(cmd):
+def get_table(cmd, both=False):
 	give_command(cmd)
 	output = poll_output(timeout=7500)
-	return utils.parse_openstack_table(output)
+	if both:
+		return utils.parse_openstack_table(output), output
+	else:
+		return utils.parse_openstack_table(output)
+
+##############################
+## configuration automation ##
+##############################
+
+def configure_deployment(vm_name, vm_type, deploy_config):
+	if vm_type == "server":
+		# TODO: testing if the server already exists?
+		create_server(vm_name, deploy_config)
+
+def configure_oai():
+	pass
+
+def create_server(vm_name, deploy_config):
+	# Step 1: Keypair
+	if deploy_config["KEY_NAME"] == None:
+		deploy_config["KEY_NAME"] = "%s_key" % deploy_config["INSTANCE_NAME"]
+	
+	# check if the user provides the path to its own key
+
+	# check failed: create a new key
+	give_command('ssh-keygen -q -N ""')
+	rc = get_returncode()
+	# TODO: maybe check return code???
+	give_command('openstack keypair create --public-key ~/.ssh/id_rsa.pub %s' % deploy_config["KEY_NAME"])
+	print poll_output()
+
+	# Step 2: Display keypair
+	table, output = get_table('openstack keypair list', both=True)
+	print output
+	newkey = [entry for entry in table if entry['Name'] == deploy_config['KEY_NAME']][0]
+	print "New key:"
+	print utils.format_dict(newkey)
+
+	if deploy_config["SECURITY_GROUP_NAME"] != None:
+		# Step 3
+		sec_grp = deploy_config['SECURITY_GROUP_NAME']
+		print "Creating new security group: %s" % sec_grp
+		
+		give_command('openstack security group create %s' % sec_grp)
+		give_command('openstack security group rule create --proto icmp %s' % sec_grp)
+		give_command('openstack security group rule create --proto tcp --dst-port 22 %s' % sec_grp)
+		
+		print poll_all_outputs()
+	else:
+		# Step 4
+		print "Using default security group"
+
+		give_command('openstack security group rule create --proto icmp default')
+		give_command('openstack security group rule create --proto tcp --dst-port 22 default')
+
+		print poll_all_outputs()
+
+		deploy_config['SECURITY_GROUP_NAME'] = 'default'
+
+	# Step 5: Parse netID
+	table, output = get_table('openstack network list', both=True)
+	net_id = [entry for entry in table if entry['Name'] == deploy_config['NETWORK_NAME']][0]['ID']
+
+	# Step 6: Create instance
+	give_command('openstack server create --flavor %s --image %s --nic net-id=%s --security-group  --key-name %s %s' % (deploy_config['FLAVOR_NAME'],
+		deploy_config['IMAGE_NAME'], net_id, deploy_config['SECURITY_GROUP_NAME'],
+		deploy_config['KEY_NAME'], deploy_config['INSTANCE_NAME']))
 
 ##########################
 ## console debug & demo ##
