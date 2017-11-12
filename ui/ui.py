@@ -7,7 +7,7 @@ Arguments:
 
 '''
 
-import os, select, time, argparse
+import os, select, time, argparse, subprocess
 import configs, utils
 
 ################
@@ -47,6 +47,7 @@ commands = {
 	}
 }
 console_running = True
+work_dir = ""
 
 def main():
 	global polling_pool
@@ -184,12 +185,15 @@ def parse_args():
 def init():
 	global home_dir
 	print "Initialzing console..."
+
+	# get working directory of THIS SCRIPT (do not confuse)
+	work_dir = subprocess.check_output(['pwd']).strip()
 	
 	give_command('sudo su - stack')
 	give_command('pwd')
 	home_dir = poll_output(timeout=1000)
 	if len(home_dir) == 0:
-		print "[WARNING] Didn't get home directory!"
+		print "[WARNING] Could not get home directory!"
 	give_command('cd devstack')
 	give_command('source openrc')    # may have output
 	print poll_output(timeout=2000)
@@ -227,12 +231,15 @@ def create_server(vm_name, deploy_config):
 	if deploy_config["KEY_NAME"] == None:
 		deploy_config["KEY_NAME"] = "%s_key" % deploy_config["INSTANCE_NAME"]
 	
-	# check if the user provides the path to its own key
+	# TODO: check if the user provides the path to its own key
 
 	# check failed: create a new key
-	give_command('ssh-keygen -q -N ""')
+	give_command('ssh-keygen -q -N ""') # requires file name
+	time.sleep(0.25)
+	give_command('')	# use default
+	time.sleep(0.25)
 	rc = get_returncode()
-	# TODO: maybe check return code???
+	# TODO: check return code???
 	give_command('openstack keypair create --public-key ~/.ssh/id_rsa.pub %s' % deploy_config["KEY_NAME"])
 	print poll_output()
 
@@ -269,6 +276,7 @@ def create_server(vm_name, deploy_config):
 	net_id = [entry for entry in table if entry['Name'] == deploy_config['NETWORK_NAME']][0]['ID']
 
 	# Step 6: Create instance
+	# TODO: what is the security group name when not specified?
 	give_command('openstack server create --flavor %s --image %s --nic net-id=%s --security-group  --key-name %s %s' % (deploy_config['FLAVOR_NAME'],
 		deploy_config['IMAGE_NAME'], net_id, deploy_config['SECURITY_GROUP_NAME'],
 		deploy_config['KEY_NAME'], deploy_config['INSTANCE_NAME']))
