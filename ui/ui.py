@@ -95,6 +95,7 @@ def main():
 	# process according to SLA specification
 	print "Processing SLA configuration..."
 	for vm in configs.sla_configs:
+		utils.print_highlight("====Deploying %s====" % vm)
 		cfg = configs.sla_configs[vm]
 		configure_deployment(vm, cfg['vm_type'], cfg['deploy_config'])
 
@@ -121,7 +122,7 @@ def give_command(cmd):
 def poll_output(timeout=5000):
 	for fd, event in polling_pool.poll(timeout):
 		output = os.read(fd, BUF_SIZE)
-		return output
+		return output.strip()
 
 	# TODO: add waitpid to see if child exits due to error
 
@@ -138,7 +139,9 @@ def get_returncode():
 		return output
 
 # timeout will be at least how long we will have to wait
-def poll_all_outputs(timeout=3000):
+def poll_all_outputs(timeout=5000, init_wait=2000):
+	time.sleep(init_wait / 1000.0)
+
 	has_output = True
 	historical_output = ""
 	while has_output:
@@ -156,7 +159,13 @@ def poll_all_outputs(timeout=3000):
 def clear_historical_outputs():
 	# Assumes historical outputs are ready to send
 	# on child's stdout or stderr
-	return poll_all_outputs(100)
+	return poll_all_outputs(timeout=200, init_wait=0)
+
+def poll_all_quick_outputs():
+	# Assumes only last command takes a long time
+	output = poll_output()
+	output = "%s\n%s" % (output, clear_historical_outputs())
+	return output
 
 ###########################
 ## console command funcs ##
@@ -198,7 +207,6 @@ def init():
 	home_dir = poll_output(timeout=1000)
 	if len(home_dir) == 0:
 		raise RuntimeError("[ERROR] Could not get home directory. Please restart and try again.")
-	home_dir = home_dir.strip()
 	give_command('cd devstack')
 	give_command('source openrc')    # may have output
 	print poll_output(timeout=2000)
@@ -232,20 +240,29 @@ def configure_oai():
 	pass
 
 def create_server(vm_name, deploy_config):
-	# Step 0: create image
-	image_file = '%s/images/ubuntu-17.04.img' % home_dir
-	if not os.path.isfile(image_file):
-		rc = subprocess.call(['wget', '-O', image_file, 
-			'https://cloud-images.ubuntu.com/zesty/20171110/zesty-server-cloudimg-amd64.img'])
-		# check return code: (may not be connected to internet)
-	else:
-		print "Using exisiting ubuntu image file on disk."
+	# check if image already exist
+	give_command('openstack image show %s' % deploy_config['IMAGE_NAME'])
+	output = poll_output(-1)
+	if output == "Could not find resource %s" % deploy_config['IMAGE_NAME']:
+		# Step 0: create image
+		image_file = '%s/images/ubuntu-17.04.img' % home_dir
+		if not os.path.isfile(image_file):
+			rc = subprocess.call(['wget', '-O', image_file, 
+				'https://cloud-images.ubuntu.com/zesty/20171110/zesty-server-cloudimg-amd64.img'])
+			# check return code: (may not be connected to internet)
+		else:
+			print "Image file: using exisiting file on disk: %s" % image_file
 
-	cmd = 'openstack image create --disk-format qcow2 --file %s %s' % (image_file,
-		deploy_config['IMAGE_NAME'])
-	print "Creating image... Please wait patiently: %s" % cmd
-	give_command(cmd)
-	print poll_output(-1) # will print image show
+		cmd = 'openstack image create --disk-format qcow2 --file %s %s' % (image_file,
+			deploy_config['IMAGE_NAME'])
+		print "Creating image... Please wait patiently:\n%s" % cmd
+		give_command(cmd)
+		print poll_output(-1) # will print image show
+	elif output == "More than one resource exists with the name or ID '%s'" % deploy_config['IMAGE_NAME']:
+		print "[WARNING] %s" % output
+	else:
+		# image exists: don't re-create
+		print "Using exisiting image '%s'" % deploy_config['IMAGE_NAME']
 
 	# Step 1: Keypair
 	if deploy_config["KEY_NAME"] == None or len(deploy_config["KEY_NAME"]) == 0:
@@ -259,13 +276,16 @@ def create_server(vm_name, deploy_config):
 	give_command('')	# use default
 	time.sleep(0.25)
 	give_command('')	# possible overwrite
-	time.sleep(0.25)
-	# TODO: check return code???
+	print poll_all_quick_outputs()
+	rc = get_returncode()
+	# TODO: check return code???)
+	# print "rc=%s" % rc 	# could be 1 if overwrite
 	give_command('openstack keypair create --public-key ~/.ssh/id_rsa.pub %s' % deploy_config["KEY_NAME"])
-	print poll_output()
+	print poll_all_outputs(init_wait=3000)
 
 	# Step 2: Display keypair
 	table, output = get_table('openstack keypair list', both=True)
+	print "Keypair list:"
 	print output
 	newkey = [entry for entry in table if entry['Name'] == deploy_config['KEY_NAME']][0]
 	print "New key:"
@@ -296,17 +316,23 @@ def create_server(vm_name, deploy_config):
 	table, output = get_table('openstack network list', both=True)
 	net_id = [entry for entry in table if entry['Name'] == deploy_config['NETWORK_NAME']][0]['ID']
 
-	print "deploy_config:"
-	print deploy_config
-
 	# Step 6: Create instance
-	# TODO: what is the security group name when not specified?
-	cmd = 'openstack server create --flavor %s --image %s --nic net-id=%s --security-group %s --key-name %s %s' % (deploy_config['FLAVOR_NAME'],
-		deploy_config['IMAGE_NAME'], net_id, deploy_config['SECURITY_GROUP_NAME'],
-		deploy_config['KEY_NAME'], deploy_config['INSTANCE_NAME'])
-	print "Processing command:"
-	print cmd
-	give_command(cmd)
+	# check if server exists already
+	give_command('openstack server show %s' % deploy_config['INSTANCE_NAME'])
+	output = poll_output(-1)
+	if output == "No server with a name or ID of '%s' exists." % deploy_config['INSTANCE_NAME']:
+		print output
+		cmd = 'openstack server create --flavor %s --image %s --nic net-id=%s --security-group %s --key-name %s %s' % (deploy_config['FLAVOR_NAME'],
+			deploy_config['IMAGE_NAME'], net_id, deploy_config['SECURITY_GROUP_NAME'],
+			deploy_config['KEY_NAME'], deploy_config['INSTANCE_NAME'])
+		print "Creating server w/ command:"
+		print cmd
+		give_command(cmd)
+	elif output == "More than one server exists with the name '%s'" % deploy_config['INSTANCE_NAME']:
+		print "[WARNING] %s" % output
+	else:
+		# server exists: don't re-create
+		print "Using exisiting server %s" % deploy_config['INSTANCE_NAME']
 
 ##########################
 ## console debug & demo ##

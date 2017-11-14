@@ -15,6 +15,12 @@ class bcolors:
 	UNDERLINE = '\033[4m'
 	BLINK = '\033[5m'
 
+def print_highlight(msg):
+	print "%s%s%s" % (bcolors.CYAN, msg, bcolors.NC)
+
+def print_error(msg):
+	print "%s%s%s" % (bcolors.RED, msg, bcolors.NC)
+
 def _is_empty(obj):
 	return obj == None or len(obj) == 0
 
