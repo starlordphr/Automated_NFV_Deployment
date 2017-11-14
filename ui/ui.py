@@ -131,7 +131,11 @@ def get_returncode():
 	clear_historical_outputs()
 	give_command("echo $?")
 	output = poll_output(timeout=1000)
-	return int(output)
+	if output.isdigit():
+		return int(output)
+	else:
+		print "[WARNING] Return code not int: %s" % output
+		return output
 
 # timeout will be at least how long we will have to wait
 def poll_all_outputs(timeout=3000):
@@ -193,7 +197,8 @@ def init():
 	give_command('pwd')
 	home_dir = poll_output(timeout=1000)
 	if len(home_dir) == 0:
-		print "[WARNING] Could not get home directory!"
+		raise RuntimeError("[ERROR] Could not get home directory. Please restart and try again.")
+	home_dir = home_dir.strip()
 	give_command('cd devstack')
 	give_command('source openrc')    # may have output
 	print poll_output(timeout=2000)
@@ -208,7 +213,7 @@ def get_cmd_func(cmd):
 # returns None if given command doesn't return any output
 def get_table(cmd, both=False):
 	give_command(cmd)
-	output = poll_output(timeout=7500)
+	output = poll_output(timeout=15000)
 	if both:
 		return utils.parse_openstack_table(output), output
 	else:
@@ -227,8 +232,23 @@ def configure_oai():
 	pass
 
 def create_server(vm_name, deploy_config):
+	# Step 0: create image
+	image_file = '%s/images/ubuntu-17.04.img' % home_dir
+	if not os.path.isfile(image_file):
+		rc = subprocess.call(['wget', '-O', image_file, 
+			'https://cloud-images.ubuntu.com/zesty/20171110/zesty-server-cloudimg-amd64.img'])
+		# check return code: (may not be connected to internet)
+	else:
+		print "Using exisiting ubuntu image file on disk."
+
+	cmd = 'openstack image create --disk-format qcow2 --file %s %s' % (image_file,
+		deploy_config['IMAGE_NAME'])
+	print "Creating image... Please wait patiently: %s" % cmd
+	give_command(cmd)
+	print poll_output(-1) # will print image show
+
 	# Step 1: Keypair
-	if deploy_config["KEY_NAME"] == None:
+	if deploy_config["KEY_NAME"] == None or len(deploy_config["KEY_NAME"]) == 0:
 		deploy_config["KEY_NAME"] = "%s_key" % deploy_config["INSTANCE_NAME"]
 	
 	# TODO: check if the user provides the path to its own key
@@ -238,7 +258,8 @@ def create_server(vm_name, deploy_config):
 	time.sleep(0.25)
 	give_command('')	# use default
 	time.sleep(0.25)
-	rc = get_returncode()
+	give_command('')	# possible overwrite
+	time.sleep(0.25)
 	# TODO: check return code???
 	give_command('openstack keypair create --public-key ~/.ssh/id_rsa.pub %s' % deploy_config["KEY_NAME"])
 	print poll_output()
@@ -275,11 +296,17 @@ def create_server(vm_name, deploy_config):
 	table, output = get_table('openstack network list', both=True)
 	net_id = [entry for entry in table if entry['Name'] == deploy_config['NETWORK_NAME']][0]['ID']
 
+	print "deploy_config:"
+	print deploy_config
+
 	# Step 6: Create instance
 	# TODO: what is the security group name when not specified?
-	give_command('openstack server create --flavor %s --image %s --nic net-id=%s --security-group  --key-name %s %s' % (deploy_config['FLAVOR_NAME'],
+	cmd = 'openstack server create --flavor %s --image %s --nic net-id=%s --security-group %s --key-name %s %s' % (deploy_config['FLAVOR_NAME'],
 		deploy_config['IMAGE_NAME'], net_id, deploy_config['SECURITY_GROUP_NAME'],
-		deploy_config['KEY_NAME'], deploy_config['INSTANCE_NAME']))
+		deploy_config['KEY_NAME'], deploy_config['INSTANCE_NAME'])
+	print "Processing command:"
+	print cmd
+	give_command(cmd)
 
 ##########################
 ## console debug & demo ##
