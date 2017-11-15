@@ -58,7 +58,7 @@ def main():
 	# process args to intialize configs module
 	# will raise exception if input is ill-formatted
 	configs.parse_sla_config(args.sla)
-	
+
 	# fork child bash
 	pid = os.fork()
 	if pid < 0:
@@ -201,7 +201,7 @@ def init():
 
 	# get working directory of THIS SCRIPT (do not confuse)
 	work_dir = subprocess.check_output(['pwd']).strip()
-	
+
 	give_command('sudo su - stack')
 	give_command('pwd')
 	home_dir = poll_output(timeout=1000)
@@ -240,6 +240,10 @@ def configure_oai():
 	pass
 
 def create_server(vm_name, deploy_config):
+	# create images folder
+	create_command = 'mkdir %s/images' % home_dir
+	give_command(create_command)
+
 	# check if image already exist
 	give_command('openstack image show %s' % deploy_config['IMAGE_NAME'])
 	output = poll_output(-1)
@@ -247,13 +251,13 @@ def create_server(vm_name, deploy_config):
 		# Step 0: create image
 		image_file = '%s/images/ubuntu-17.04.img' % home_dir
 		if not os.path.isfile(image_file):
-			rc = subprocess.call(['wget', '-O', image_file, 
+			rc = subprocess.call(['wget', '-O', image_file,
 				'https://cloud-images.ubuntu.com/zesty/20171110/zesty-server-cloudimg-amd64.img'])
 			# check return code: (may not be connected to internet)
 		else:
 			print "Image file: using exisiting file on disk: %s" % image_file
 
-		cmd = 'openstack image create --disk-format qcow2 --file %s %s' % (image_file,
+		cmd = 'openstack image create --unprotected --public --disk-format qcow2 --file %s %s' % (image_file,
 			deploy_config['IMAGE_NAME'])
 		print "Creating image... Please wait patiently:\n%s" % cmd
 		give_command(cmd)
@@ -267,10 +271,13 @@ def create_server(vm_name, deploy_config):
 	# Step 1: Keypair
 	if deploy_config["KEY_NAME"] == None or len(deploy_config["KEY_NAME"]) == 0:
 		deploy_config["KEY_NAME"] = "%s_key" % deploy_config["INSTANCE_NAME"]
-	
+
 	# TODO: check if the user provides the path to its own key
 
 	# check failed: create a new key
+	give_command('rm -f ~/.ssh/id_rsa')
+	output = poll_output(-1)
+	time.sleep(0.25)
 	give_command('ssh-keygen -q -N ""') # requires file name
 	time.sleep(0.25)
 	give_command('')	# use default
@@ -287,19 +294,20 @@ def create_server(vm_name, deploy_config):
 	table, output = get_table('openstack keypair list', both=True)
 	print "Keypair list:"
 	print output
-	newkey = [entry for entry in table if entry['Name'] == deploy_config['KEY_NAME']][0]
-	print "New key:"
-	print utils.format_dict(newkey)
+	# This piece of code is creating a lot of errors
+	#newkey = [entry for entry in table if entry['Name'] == deploy_config['KEY_NAME']][0]
+	#print "New key:"
+	#print utils.format_dict(newkey)
 
 	if deploy_config["SECURITY_GROUP_NAME"] != None:
 		# Step 3
 		sec_grp = deploy_config['SECURITY_GROUP_NAME']
 		print "Creating new security group: %s" % sec_grp
-		
+
 		give_command('openstack security group create %s' % sec_grp)
 		give_command('openstack security group rule create --proto icmp %s' % sec_grp)
 		give_command('openstack security group rule create --proto tcp --dst-port 22 %s' % sec_grp)
-		
+
 		print poll_all_outputs()
 	else:
 		# Step 4
@@ -328,6 +336,7 @@ def create_server(vm_name, deploy_config):
 		print "Creating server w/ command:"
 		print cmd
 		give_command(cmd)
+		#print poll_all_outputs(init_wait=10000) #My addition
 	elif output == "More than one server exists with the name '%s'" % deploy_config['INSTANCE_NAME']:
 		print "[WARNING] %s" % output
 	else:
