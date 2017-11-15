@@ -221,7 +221,7 @@ def get_cmd_func(cmd):
 # returns None if given command doesn't return any output
 def get_table(cmd, both=False):
 	give_command(cmd)
-	output = poll_output(timeout=15000)
+	output = poll_output(-1)
 	if both:
 		return utils.parse_openstack_table(output), output
 	else:
@@ -241,12 +241,16 @@ def configure_oai():
 
 def create_server(vm_name, deploy_config):
 	# create images folder
-	create_command = 'mkdir %s/images' % home_dir
-	give_command(create_command)
+	img_dir = '%s/images' % home_dir
+	utils.print_warning("Checking %s" % img_dir)
+	if not os.path.isdir(img_dir):
+		create_command = 'mkdir %a' % img_dir
+		give_command(create_command)
 
 	# check if image already exist
 	give_command('openstack image show %s' % deploy_config['IMAGE_NAME'])
 	output = poll_output(-1)
+	utils.print_warning (output)
 	if output == "Could not find resource %s" % deploy_config['IMAGE_NAME']:
 		# Step 0: create image
 		image_file = '%s/images/ubuntu-17.04.img' % home_dir
@@ -257,13 +261,13 @@ def create_server(vm_name, deploy_config):
 		else:
 			print "Image file: using exisiting file on disk: %s" % image_file
 
-		cmd = 'openstack image create --unprotected --public --disk-format qcow2 --file %s %s' % (image_file,
+		cmd = 'openstack image create --unprotected --disk-format qcow2 --file %s %s' % (image_file,
 			deploy_config['IMAGE_NAME'])
 		print "Creating image... Please wait patiently:\n%s" % cmd
 		give_command(cmd)
 		print poll_output(-1) # will print image show
 	elif output == "More than one resource exists with the name or ID '%s'" % deploy_config['IMAGE_NAME']:
-		print "[WARNING] %s" % output
+		utils.print_warning("[WARNING] %s" % output)
 	else:
 		# image exists: don't re-create
 		print "Using exisiting image '%s'" % deploy_config['IMAGE_NAME']
@@ -275,20 +279,21 @@ def create_server(vm_name, deploy_config):
 	# TODO: check if the user provides the path to its own key
 
 	# check failed: create a new key
-	give_command('rm -f ~/.ssh/id_rsa')
-	output = poll_output(-1)
+	give_command('rm -f ~/.ssh/id_rsa*')
+	# output = poll_output(-1)
 	time.sleep(0.25)
 	give_command('ssh-keygen -q -N ""') # requires file name
 	time.sleep(0.25)
 	give_command('')	# use default
 	time.sleep(0.25)
-	give_command('')	# possible overwrite
-	print poll_all_quick_outputs()
-	rc = get_returncode()
+	# give_command('')	# possible overwrite
+	print poll_all_outputs(timeout=3000, init_wait=0)
+	# rc = get_returncode()
 	# TODO: check return code???)
 	# print "rc=%s" % rc 	# could be 1 if overwrite
+	utils.print_warning("Creating keypair...")
 	give_command('openstack keypair create --public-key ~/.ssh/id_rsa.pub %s' % deploy_config["KEY_NAME"])
-	print poll_all_outputs(init_wait=3000)
+	print poll_output(-1)
 
 	# Step 2: Display keypair
 	table, output = get_table('openstack keypair list', both=True)
@@ -305,18 +310,23 @@ def create_server(vm_name, deploy_config):
 		print "Creating new security group: %s" % sec_grp
 
 		give_command('openstack security group create %s' % sec_grp)
+		print poll_output(-1)
 		give_command('openstack security group rule create --proto icmp %s' % sec_grp)
+		print poll_output(-1)
 		give_command('openstack security group rule create --proto tcp --dst-port 22 %s' % sec_grp)
+		print poll_output(-1)
 
-		print poll_all_outputs()
+		# print poll_all_outputs()
 	else:
 		# Step 4
 		print "Using default security group"
 
 		give_command('openstack security group rule create --proto icmp default')
+		print poll_output(-1)
 		give_command('openstack security group rule create --proto tcp --dst-port 22 default')
+		print poll_output(-1)
 
-		print poll_all_outputs()
+		# print poll_all_outputs()
 
 		deploy_config['SECURITY_GROUP_NAME'] = 'default'
 
@@ -336,6 +346,7 @@ def create_server(vm_name, deploy_config):
 		print "Creating server w/ command:"
 		print cmd
 		give_command(cmd)
+		print poll_output(-1)
 		#print poll_all_outputs(init_wait=10000) #My addition
 	elif output == "More than one server exists with the name '%s'" % deploy_config['INSTANCE_NAME']:
 		print "[WARNING] %s" % output
