@@ -20,7 +20,7 @@ print-highlight "----- Setting up openstack..."
 sudo useradd -s /bin/bash -d /opt/stack -m stack
 echo "stack ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/stack
 chmod +x install-openstack.sh
-cp install-openstack.sh /opt/stack
+sudo cp install-openstack.sh /opt/stack
 sudo su - stack 	# will swtich user here
 # git clone https://git.openstack.org/openstack-dev/devstack
 # mkdir .cache	# to prevent a common error
