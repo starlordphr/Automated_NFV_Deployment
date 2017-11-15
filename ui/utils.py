@@ -21,6 +21,9 @@ def print_highlight(msg):
 def print_error(msg):
 	print "%s%s%s" % (bcolors.RED, msg, bcolors.NC)
 
+def print_warning(msg):
+	print "%s%s%s" % (bcolors.YELLOW, msg, bcolors.NC)
+
 def _is_empty(obj):
 	return obj == None or len(obj) == 0
 
