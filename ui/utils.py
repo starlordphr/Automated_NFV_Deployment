@@ -32,7 +32,7 @@ def _is_hex(s):
 		return False
 	return all(c in string.hexdigits for c in s)
 
-def _parse_row(row):
+def _parse_row(row, colcount=-1):
 	ret = row.split('|')
 	for idx, entry in enumerate(ret):
 		entry = entry.strip()
@@ -40,6 +40,9 @@ def _parse_row(row):
 	# remove all empty strings
 	while ret.count('') != 0:
 		ret.remove('')
+	if colcount >= 0 and len(ret) < colcount:
+		for i in xrange(colcount - len(ret)):
+			ret.append['']
 	return ret
 
 def parse_openstack_table(s):
@@ -81,7 +84,7 @@ def parse_openstack_table(s):
 			col_names.append(_parse_row(row))
 		elif bar_count == 2:
 			# rows with data
-			col_vals.append(_parse_row(row))
+			col_vals.append(_parse_row(row, len(col_names[0])))
 
 	if len(col_names) > 1:
 		# in case it takes multiple rows for a title
