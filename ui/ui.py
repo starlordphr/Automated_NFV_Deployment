@@ -244,7 +244,7 @@ def create_server(vm_name, deploy_config):
 	img_dir = '%s/images' % home_dir
 	utils.print_warning("Checking %s" % img_dir)
 	if not os.path.isdir(img_dir):
-		create_command = 'mkdir %a' % img_dir
+		create_command = 'mkdir %s' % img_dir
 		give_command(create_command)
 
 	# check if image already exist
