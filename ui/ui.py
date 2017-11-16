@@ -356,11 +356,11 @@ def create_server(vm_name, deploy_config):
 
 	#Creating floating ip
 
-	give_command('openstack ip floating create %s' % deploy_config['PUBLIC_NETWORK_NAME'])
+	give_command('openstack floating ip create %s' % deploy_config['PUBLIC_NETWORK_NAME'])
 	output = poll_output(-1)
 	print output
 	table = utils.parse_openstack_table(output)
-	ip = [entry['Value'] for entry in table if entry['Field'] == 'ip'][0]
+	ip = [entry['Value'] for entry in table if entry['Field'] == 'floating_ip_address'][0]
 	give_command('openstack ip floating add %s %s' % (ip, deploy_config['INSTANCE_NAME']))
 	print poll_output()
 
