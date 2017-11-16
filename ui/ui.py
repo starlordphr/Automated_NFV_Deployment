@@ -354,6 +354,9 @@ def create_server(vm_name, deploy_config):
 		# server exists: don't re-create
 		print "Using exisiting server %s" % deploy_config['INSTANCE_NAME']
 
+	
+
+
 ##########################
 ## console debug & demo ##
 ##########################
