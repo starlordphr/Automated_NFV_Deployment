@@ -332,7 +332,7 @@ def create_server(vm_name, deploy_config):
 
 	# Step 5: Parse netID
 	table, output = get_table('openstack network list', both=True)
-	net_id = [entry for entry in table if entry['Name'] == deploy_config['NETWORK_NAME']][0]['ID']
+	net_id = [entry for entry in table if entry['Name'] == deploy_config['PRIVATE_NETWORK_NAME']][0]['ID']
 
 	# Step 6: Create instance
 	# check if server exists already
@@ -354,7 +354,11 @@ def create_server(vm_name, deploy_config):
 		# server exists: don't re-create
 		print "Using exisiting server %s" % deploy_config['INSTANCE_NAME']
 
-	
+	#Creating floating ip
+
+	give_command('openstack ip floating create %s' % deploy_config['PUBLIC_NETWORK_NAME'])
+	output = poll_output(-1)
+	print output
 
 
 ##########################

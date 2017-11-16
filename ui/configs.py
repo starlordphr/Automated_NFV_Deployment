@@ -17,7 +17,8 @@ _cfg = None
 SERVER_CONFIG = {
 	"FLAVOR_NAME" : "",
 	"IMAGE_NAME" : "",
-	"NETWORK_NAME" : "",
+	"PRIVATE_NETWORK_NAME" : "",
+	"PUBLIC_NETWORK_NAME" : "",
 	"SECURITY_GROUP_NAME" : "optional",
 	"KEY_NAME" : "optional",
 	"INSTANCE_NAME" : ""
@@ -77,7 +78,7 @@ def _opt_of_opt(opt):
 			opt.remove("optional")
 		if len(opt) > 0:
 			data_type = opt[0]
-	
+
 	return data_type, optional
 
 def _get_deploy_config(vm_name, vm_type):
