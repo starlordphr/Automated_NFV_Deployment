@@ -59,6 +59,6 @@ git apply ../opencells-mods/EPC.patch
 echo "----- Provision: Installing third party SW for EPC..."
 source oaienv
 cd scripts
-./HSS_expect  #Semi-Automatic
+./../../HSS_expect  #Semi-Automatic
 
 ./build_hss
