@@ -42,7 +42,7 @@ def _parse_row(row, colcount=-1):
 		ret.remove('')
 	if colcount >= 0 and len(ret) < colcount:
 		for i in xrange(colcount - len(ret)):
-			ret.append['']
+			ret.append('')
 	return ret
 
 def parse_openstack_table(s):

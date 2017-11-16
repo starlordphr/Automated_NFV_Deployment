@@ -356,12 +356,12 @@ def create_server(vm_name, deploy_config):
 
 	#Creating floating ip
 
-	give_command('openstack floating ip create %s' % deploy_config['PUBLIC_NETWORK_NAME'])
+	'''give_command('openstack floating ip create %s' % deploy_config['PUBLIC_NETWORK_NAME'])
 	output = poll_output(-1)
 	print output
 	table = utils.parse_openstack_table(output)
 	ip = [entry['Value'] for entry in table if entry['Field'] == 'floating_ip_address'][0]
-	give_command('openstack ip floating add %s %s' % (ip, deploy_config['INSTANCE_NAME']))
+	give_command('openstack server add floating ip %s %s' % (deploy_config['INSTANCE_NAME'], ip))
 	print poll_output()
 
 	give_command('ssh ubuntu@%s' % ip)
@@ -369,7 +369,7 @@ def create_server(vm_name, deploy_config):
 	give_command('echo "hello world" > proof.txt')	# to be replaced by OAI config
 	print poll_output(timeout=1000)
 	give_command('exit')
-	print poll_output()
+	print poll_output()'''
 
 ##########################
 ## console debug & demo ##
