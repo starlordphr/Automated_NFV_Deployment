@@ -1,5 +1,6 @@
+#!/usr/bin/expect -f
 set timeout -1
-spawn ./build_mme -i
+spawn ./openair-cn/scripts/build_mme -i
 match_max 100000
 expect -exact "Do you want to continue? \[Y/n\] "
 send -- "y\r"
