@@ -1,0 +1,33 @@
+set timeout -1
+spawn ./build_mme -i
+match_max 100000
+expect -exact "Do you want to continue? \[Y/n\] "
+send -- "y\r"
+expect -exact "Do you want to continue? \[Y/n\] "
+send -- "y\r"
+expect -exact "Do you want to continue? \[Y/n\] "
+send -- "y\r"
+expect -exact "Do you want to install asn1c rev 1516 patched? <y/N> "
+send -- "y\r"
+expect -exact "Do you want to continue? \[Y/n\] "
+send -- "y\r"
+expect -exact "Do you want to install libgtpnl ? <y/N> "
+send -- "y\r"
+expect -exact "Do you want to continue? \[Y/n\] "
+send -- "y\r"
+#6407 what the fuck
+expect -exact "<No>"
+send -- "\[D"
+expect -exact "<No>"
+send -- "\r"
+expect -exact "Do you want to continue? \[Y/n\] "
+send -- "y\r"
+expect -exact "<Ok>"
+send -- "\r"
+expect -exact "<No>"
+send -- "\r"
+expect -exact "<Cancel>"
+send -- "\[B"
+expect -exact "<Ok>"
+send -- "\r"
+expect eof
