@@ -247,6 +247,11 @@ def create_server(vm_name, deploy_config):
 		create_command = 'mkdir %s' % img_dir
 		give_command(create_command)
 
+	keystore_dir = '%s/keys' % home_dir
+	if not os.path.isdir(keystore_dir):
+		create_keystore_command = 'mkdir %s' % keystore_dir
+		give_command(create_keystore_command)
+
 	# check if image already exist
 	give_command('openstack image show %s' % deploy_config['IMAGE_NAME'])
 	output = poll_output(-1)
@@ -294,6 +299,10 @@ def create_server(vm_name, deploy_config):
 	utils.print_warning("Creating keypair...")
 	give_command('openstack keypair create --public-key ~/.ssh/id_rsa.pub %s' % deploy_config["KEY_NAME"])
 	print poll_output(-1)
+
+	# Copy the key to our keystore
+	give_command('cp ~/.ssh/id_rsa %s/%s' % (keystore_dir, deploy_config["KEY_NAME"]))
+	#give_command('chmod 400 %s/%s' % (keystore_dir, deploy_config["KEY_NAME"]))
 
 	# Step 2: Display keypair
 	table, output = get_table('openstack keypair list', both=True)
@@ -355,21 +364,26 @@ def create_server(vm_name, deploy_config):
 		print "Using exisiting server %s" % deploy_config['INSTANCE_NAME']
 
 	#Creating floating ip
+	time.sleep(20) # added to give time for the spawning to complete
 
-	'''give_command('openstack floating ip create %s' % deploy_config['PUBLIC_NETWORK_NAME'])
+	give_command('openstack floating ip create %s' % deploy_config['PUBLIC_NETWORK_NAME'])
 	output = poll_output(-1)
 	print output
 	table = utils.parse_openstack_table(output)
 	ip = [entry['Value'] for entry in table if entry['Field'] == 'floating_ip_address'][0]
 	give_command('openstack server add floating ip %s %s' % (deploy_config['INSTANCE_NAME'], ip))
 	print poll_output()
+	time.sleep(0.25)
 
-	give_command('ssh ubuntu@%s' % ip)
+	command_to_run = 'echo "hello world" > proof.txt'
+	ssh_command = 'sudo ssh -tt -oStrictHostKeyChecking=no -i %s/%s ubuntu@%s %s' % (keystore_dir, deploy_config["KEY_NAME"], ip, command_to_run)
+	print ssh_command
+	give_command(ssh_command)
 	print poll_output(-1)
-	give_command('echo "hello world" > proof.txt')	# to be replaced by OAI config
-	print poll_output(timeout=1000)
-	give_command('exit')
-	print poll_output()'''
+	#give_command('echo "hello world" > proof.txt')	# to be replaced by OAI config
+	#print poll_output(timeout=1000)
+	#give_command('exit')
+	print poll_output()
 
 ##########################
 ## console debug & demo ##
