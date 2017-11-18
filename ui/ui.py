@@ -301,7 +301,7 @@ def create_server(vm_name, deploy_config):
 	print poll_output(-1)
 
 	# Copy the key to our keystore
-	give_command('cp ~/.ssh/id_rsa %s/%s' % (keystore_dir, deploy_config["KEY_NAME"]))
+	give_command('cp -f ~/.ssh/id_rsa %s/%s' % (keystore_dir, deploy_config["KEY_NAME"]))
 	#give_command('chmod 400 %s/%s' % (keystore_dir, deploy_config["KEY_NAME"]))
 
 	# Step 2: Display keypair
@@ -369,21 +369,26 @@ def create_server(vm_name, deploy_config):
 	give_command('openstack floating ip create %s' % deploy_config['PUBLIC_NETWORK_NAME'])
 	output = poll_output(-1)
 	print output
+	time.sleep(30)
 	table = utils.parse_openstack_table(output)
 	ip = [entry['Value'] for entry in table if entry['Field'] == 'floating_ip_address'][0]
 	give_command('openstack server add floating ip %s %s' % (deploy_config['INSTANCE_NAME'], ip))
-	print poll_output()
-	time.sleep(0.25)
+	#print poll_output()
+	time.sleep(120)
 
 	command_to_run = 'echo "hello world" > proof.txt'
-	ssh_command = 'sudo ssh -tt -oStrictHostKeyChecking=no -i %s/%s ubuntu@%s %s' % (keystore_dir, deploy_config["KEY_NAME"], ip, command_to_run)
+	ssh_command = 'sudo ssh -T -oStrictHostKeyChecking=no -i %s/%s ubuntu@%s \'%s\'' % (keystore_dir, deploy_config["KEY_NAME"], ip, command_to_run)
 	print ssh_command
 	give_command(ssh_command)
-	print poll_output(-1)
+	print poll_all_outputs()
 	#give_command('echo "hello world" > proof.txt')	# to be replaced by OAI config
 	#print poll_output(timeout=1000)
 	#give_command('exit')
-	print poll_output()
+	#print poll_output()
+
+	# To remove the key from known host
+	# ssh-keygen -f "/root/.ssh/known_hosts" -R 172.24.4.6
+	# sudo rm "/opt/stack/.ssh/known_hosts"
 
 ##########################
 ## console debug & demo ##
