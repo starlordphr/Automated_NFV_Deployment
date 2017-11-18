@@ -59,5 +59,6 @@ git apply ../opencells-mods/EPC.patch
 echo "----- Provision: Installing third party SW for EPC..."
 source oaienv
 cd ../
+sudo apt install -y expect
 ./MME_expect.exp
 ./openair-cn/scripts/build_hss
