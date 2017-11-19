@@ -5,7 +5,7 @@ This script handles parsing SLA configurations for ui script to use
 # Tutorial at:
 # https://docs.python.org/2/library/configparser.html
 
-import sys
+import sys, os
 from ConfigParser import ConfigParser
 
 sla_configs = {}
@@ -24,9 +24,25 @@ SERVER_CONFIG = {
 	"INSTANCE_NAME" : ""
 }
 
+OAI_CONFIGS = {
+	'eNodeB' : {
+		'TIME_ZONE' : "optional"
+	},
+	'ue' : {
+		'TIME_ZONE' : "optional"
+	},
+	'hss' : {},
+	'mme' : {},
+	'spgw' : {}
+}
+
 def parse_sla_config(fname):
 	# global all constants
 	global _cfg, sla_configs
+
+	# check file existence
+	if not os.path.isfile(fname):
+		raise RuntimeError("[configs.py] %s: file does not exist!" % fname)
 
 	_cfg = ConfigParser()
 	_cfg.read(fname)
@@ -39,17 +55,17 @@ def parse_sla_config(fname):
 		deploy_config = _get_deploy_config(vm_name, vm_type)
 
 		# get oai configuration for vm
-		oai_config = None
+		oai_configs = _get_oai_configs(vm_name)
 
 		sla_configs[vm_name] = {
 			"vm_type" : vm_type,
 			"deploy_config" : deploy_config,
-			"oai_config" : oai_config
+			"oai_configs" : oai_configs
 		}
 
 def _try_get_option(sect, opt, data_type='str', optional=False):
 	data_type = data_type.lower()
-	if (_cfg.has_option(sect, opt)):
+	if _cfg.has_option(sect, opt):
 		if data_type == 'str' or data_type == 'string':
 			return _cfg.get(sect, opt)
 		elif data_type == 'int' or data_type == 'integer':
@@ -95,3 +111,38 @@ def _get_deploy_config(vm_name, vm_type):
 		return None
 	else:
 		raise RuntimeError("Unknown VM type in configuration: %s" % vm_type)
+
+def _get_oai_configs(vm_name):
+	ret = {}
+	for oai_opt in OAI_CONFIGS:
+		sect = '%s-%s' % (vm_name, oai_opt)
+		if _cfg.has_section(sect):
+			if len(_cfg.options(sect)) == 0:
+				ret[oai_opt] = {}
+			else:
+				conf = dict(OAI_CONFIGS[oai_opt])
+
+				for opt in conf:
+					data_type, optional = _opt_of_opt(conf[opt])
+					conf[opt] = _try_get_option(sect, opt, data_type, optional)
+
+				ret[oai_opt] = conf
+
+	# check if UE and eNodeB coexists since they're really close
+	if ret.has_key('eNodeB') and ret.has_key('ue'):
+		coexists = True
+		if len(ret['eNodeB']) == 0 and len(ret['ue']) > 0:
+			ret['eNodeB_ue'] = ret['ue']
+		elif len(ret['eNodeB']) > 0 and len(ret['ue']) == 0:
+			ret['eNodeB_ue'] = ret['eNodeB']
+		elif len(ret['eNodeB']) == 0 and len(ret['ue']) == 0:
+			ret['eNodeB_ue'] = 0
+		else:
+			# different configuration for UE and eNodeB, keep both
+			coexists = False
+
+		if coexists:
+			ret.pop('eNodeB')
+			ret.pop('ue')
+
+	return ret

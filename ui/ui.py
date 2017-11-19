@@ -98,6 +98,7 @@ def main():
 		utils.print_highlight("====Deploying %s====" % vm)
 		cfg = configs.sla_configs[vm]
 		configure_deployment(vm, cfg['vm_type'], cfg['deploy_config'])
+		configure_oai(vm, cfg['vm_type'], cfg['oai_configs'])
 
 	# user console
 	while console_running:
@@ -236,8 +237,11 @@ def configure_deployment(vm_name, vm_type, deploy_config):
 		# TODO: testing if the server already exists?
 		create_server(vm_name, deploy_config)
 
-def configure_oai():
-	pass
+def configure_oai(vm_name, vm_type, oai_configs):
+	for oai_opt in oai_configs:
+		# oai_opt = eNodeB, ue, eNodeB_ue, hss, mme, spgw
+		# oai_configs[oai_opt] = {}	--> dict for possible params in the future
+		pass
 
 def create_server(vm_name, deploy_config):
 	# create images folder
