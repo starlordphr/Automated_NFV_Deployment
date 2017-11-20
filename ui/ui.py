@@ -49,6 +49,12 @@ commands = {
 console_running = True
 work_dir = ""
 
+# new variables
+keystore_dir = ""
+keyName = ""
+ip = ""
+command_to_run = ""
+
 def main():
 	global polling_pool
 
@@ -238,12 +244,66 @@ def configure_deployment(vm_name, vm_type, deploy_config):
 		create_server(vm_name, deploy_config)
 
 def configure_oai(vm_name, vm_type, oai_configs):
+	global command_to_run
+	source_file_path = '/home/prajput/Automated_NFV_Deployment/ui/OAI_Scripts/' # TODO : change to relative path
+	destination_file_path = '/home/ubuntu/'
+
 	for oai_opt in oai_configs:
 		# oai_opt = eNodeB, ue, eNodeB_ue, hss, mme, spgw
 		# oai_configs[oai_opt] = {}	--> dict for possible params in the future
-		pass
+		if oai_opt == "eNodeB":
+			source_file_path += 'eNodeB.sh'
+			destination_file_path += 'eNodeB.sh'
+
+		if oai_opt == "ue":
+			source_file_path += 'UE.sh'
+			destination_file_path += 'UE.sh'
+
+		if oai_opt == "eNodeB_ue":
+			source_file_path += 'UE_eNodeB.sh'
+			destination_file_path += 'UE_eNodeB.sh'
+
+		if oai_opt == "hss":
+			source_file_path += 'HSS.sh'
+			destination_file_path += 'HSS.sh'
+
+		if oai_opt == "mme":
+			source_file_path += 'MME.sh'
+			destination_file_path += 'MME.sh'
+
+		if oai_opt == "spgw":
+			source_file_path += 'SPGW.sh'
+			destination_file_path += 'SPGW.sh'
+
+
+		scp_command(source_file_path, destination_file_path)
+		time.sleep(0.25)
+
+		command_to_run = 'sudo bash %s' % destination_file_path
+		ssh_command(command_to_run)
+
+def ssh_command(command_to_run):
+
+	# To remove the key from known host
+	# ssh-keygen -f "/root/.ssh/known_hosts" -R 172.24.4.6
+	# sudo rm "/opt/stack/.ssh/known_hosts"
+
+	ssh_command = 'sudo ssh -T -oStrictHostKeyChecking=no -i %s/%s ubuntu@%s \'%s\'' % (keystore_dir, keyName, ip, command_to_run)
+	print ssh_command
+	give_command(ssh_command)
+	print poll_all_outputs()
+
+def scp_command(source_file_path, destination_file_path):
+	scp_command = 'sudo scp -oStrictHostKeyChecking=no -i %s/%s %s ubuntu@%s:%s' % (keystore_dir, keyName, source_file_path, ip, destination_file_path)
+	print scp_command
+	give_command(scp_command)
+	print poll_all_outputs()
 
 def create_server(vm_name, deploy_config):
+	global keystore_dir
+	global keyName
+	global ip
+
 	# create images folder
 	img_dir = '%s/images' % home_dir
 	utils.print_warning("Checking %s" % img_dir)
@@ -305,6 +365,7 @@ def create_server(vm_name, deploy_config):
 	print poll_output(-1)
 
 	# Copy the key to our keystore
+	keyName = deploy_config["KEY_NAME"]
 	give_command('cp -f ~/.ssh/id_rsa %s/%s' % (keystore_dir, deploy_config["KEY_NAME"]))
 	#give_command('chmod 400 %s/%s' % (keystore_dir, deploy_config["KEY_NAME"]))
 
@@ -380,19 +441,7 @@ def create_server(vm_name, deploy_config):
 	#print poll_output()
 	time.sleep(120)
 
-	command_to_run = 'echo "hello world" > proof.txt'
-	ssh_command = 'sudo ssh -T -oStrictHostKeyChecking=no -i %s/%s ubuntu@%s \'%s\'' % (keystore_dir, deploy_config["KEY_NAME"], ip, command_to_run)
-	print ssh_command
-	give_command(ssh_command)
-	print poll_all_outputs()
-	#give_command('echo "hello world" > proof.txt')	# to be replaced by OAI config
-	#print poll_output(timeout=1000)
-	#give_command('exit')
-	#print poll_output()
 
-	# To remove the key from known host
-	# ssh-keygen -f "/root/.ssh/known_hosts" -R 172.24.4.6
-	# sudo rm "/opt/stack/.ssh/known_hosts"
 
 ##########################
 ## console debug & demo ##
