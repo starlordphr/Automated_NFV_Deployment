@@ -58,7 +58,7 @@ def main():
 	# process args to intialize configs module
 	# will raise exception if input is ill-formatted
 	configs.parse_sla_config(args.sla)
-	
+
 	# fork child bash
 	pid = os.fork()
 	if pid < 0:
@@ -95,8 +95,10 @@ def main():
 	# process according to SLA specification
 	print "Processing SLA configuration..."
 	for vm in configs.sla_configs:
+		utils.print_highlight("====Deploying %s====" % vm)
 		cfg = configs.sla_configs[vm]
 		configure_deployment(vm, cfg['vm_type'], cfg['deploy_config'])
+		configure_oai(vm, cfg['vm_type'], cfg['oai_configs'])
 
 	# user console
 	while console_running:
@@ -121,7 +123,7 @@ def give_command(cmd):
 def poll_output(timeout=5000):
 	for fd, event in polling_pool.poll(timeout):
 		output = os.read(fd, BUF_SIZE)
-		return output
+		return output.strip()
 
 	# TODO: add waitpid to see if child exits due to error
 
@@ -138,7 +140,9 @@ def get_returncode():
 		return output
 
 # timeout will be at least how long we will have to wait
-def poll_all_outputs(timeout=3000):
+def poll_all_outputs(timeout=5000, init_wait=2000):
+	time.sleep(init_wait / 1000.0)
+
 	has_output = True
 	historical_output = ""
 	while has_output:
@@ -156,7 +160,13 @@ def poll_all_outputs(timeout=3000):
 def clear_historical_outputs():
 	# Assumes historical outputs are ready to send
 	# on child's stdout or stderr
-	return poll_all_outputs(100)
+	return poll_all_outputs(timeout=200, init_wait=0)
+
+def poll_all_quick_outputs():
+	# Assumes only last command takes a long time
+	output = poll_output()
+	output = "%s\n%s" % (output, clear_historical_outputs())
+	return output
 
 ###########################
 ## console command funcs ##
@@ -192,13 +202,12 @@ def init():
 
 	# get working directory of THIS SCRIPT (do not confuse)
 	work_dir = subprocess.check_output(['pwd']).strip()
-	
+
 	give_command('sudo su - stack')
 	give_command('pwd')
 	home_dir = poll_output(timeout=1000)
 	if len(home_dir) == 0:
 		raise RuntimeError("[ERROR] Could not get home directory. Please restart and try again.")
-	home_dir = home_dir.strip()
 	give_command('cd devstack')
 	give_command('source openrc')    # may have output
 	print poll_output(timeout=2000)
@@ -213,7 +222,7 @@ def get_cmd_func(cmd):
 # returns None if given command doesn't return any output
 def get_table(cmd, both=False):
 	give_command(cmd)
-	output = poll_output(timeout=15000)
+	output = poll_output(-1)
 	if both:
 		return utils.parse_openstack_table(output), output
 	else:
@@ -228,85 +237,162 @@ def configure_deployment(vm_name, vm_type, deploy_config):
 		# TODO: testing if the server already exists?
 		create_server(vm_name, deploy_config)
 
-def configure_oai():
-	pass
+def configure_oai(vm_name, vm_type, oai_configs):
+	for oai_opt in oai_configs:
+		# oai_opt = eNodeB, ue, eNodeB_ue, hss, mme, spgw
+		# oai_configs[oai_opt] = {}	--> dict for possible params in the future
+		pass
 
 def create_server(vm_name, deploy_config):
-	# Step 0: create image
-	image_file = '%s/images/ubuntu-17.04.img' % home_dir
-	if not os.path.isfile(image_file):
-		rc = subprocess.call(['wget', '-O', image_file, 
-			'https://cloud-images.ubuntu.com/zesty/20171110/zesty-server-cloudimg-amd64.img'])
-		# check return code: (may not be connected to internet)
-	else:
-		print "Using exisiting ubuntu image file on disk."
+	# create images folder
+	img_dir = '%s/images' % home_dir
+	utils.print_warning("Checking %s" % img_dir)
+	if not os.path.isdir(img_dir):
+		create_command = 'mkdir %s' % img_dir
+		give_command(create_command)
 
-	cmd = 'openstack image create --disk-format qcow2 --file %s %s' % (image_file,
-		deploy_config['IMAGE_NAME'])
-	print "Creating image... Please wait patiently: %s" % cmd
-	give_command(cmd)
-	print poll_output(-1) # will print image show
+	keystore_dir = '%s/keys' % home_dir
+	if not os.path.isdir(keystore_dir):
+		create_keystore_command = 'mkdir %s' % keystore_dir
+		give_command(create_keystore_command)
+
+	# check if image already exist
+	give_command('openstack image show %s' % deploy_config['IMAGE_NAME'])
+	output = poll_output(-1)
+	utils.print_warning (output)
+	if output == "Could not find resource %s" % deploy_config['IMAGE_NAME']:
+		# Step 0: create image
+		image_file = '%s/images/ubuntu-17.04.img' % home_dir
+		if not os.path.isfile(image_file):
+			rc = subprocess.call(['wget', '-O', image_file,
+				'https://cloud-images.ubuntu.com/zesty/20171110/zesty-server-cloudimg-amd64.img'])
+			# check return code: (may not be connected to internet)
+		else:
+			print "Image file: using exisiting file on disk: %s" % image_file
+
+		cmd = 'openstack image create --unprotected --disk-format qcow2 --file %s %s' % (image_file,
+			deploy_config['IMAGE_NAME'])
+		print "Creating image... Please wait patiently:\n%s" % cmd
+		give_command(cmd)
+		print poll_output(-1) # will print image show
+	elif output == "More than one resource exists with the name or ID '%s'" % deploy_config['IMAGE_NAME']:
+		utils.print_warning("[WARNING] %s" % output)
+	else:
+		# image exists: don't re-create
+		print "Using exisiting image '%s'" % deploy_config['IMAGE_NAME']
 
 	# Step 1: Keypair
 	if deploy_config["KEY_NAME"] == None or len(deploy_config["KEY_NAME"]) == 0:
 		deploy_config["KEY_NAME"] = "%s_key" % deploy_config["INSTANCE_NAME"]
-	
+
 	# TODO: check if the user provides the path to its own key
 
 	# check failed: create a new key
+	give_command('rm -f ~/.ssh/id_rsa*')
+	# output = poll_output(-1)
+	time.sleep(0.25)
 	give_command('ssh-keygen -q -N ""') # requires file name
 	time.sleep(0.25)
 	give_command('')	# use default
 	time.sleep(0.25)
-	give_command('')	# possible overwrite
-	time.sleep(0.25)
-	# TODO: check return code???
+	# give_command('')	# possible overwrite
+	print poll_all_outputs(timeout=3000, init_wait=0)
+	# rc = get_returncode()
+	# TODO: check return code???)
+	# print "rc=%s" % rc 	# could be 1 if overwrite
+	utils.print_warning("Creating keypair...")
 	give_command('openstack keypair create --public-key ~/.ssh/id_rsa.pub %s' % deploy_config["KEY_NAME"])
-	print poll_output()
+	print poll_output(-1)
+
+	# Copy the key to our keystore
+	give_command('cp -f ~/.ssh/id_rsa %s/%s' % (keystore_dir, deploy_config["KEY_NAME"]))
+	#give_command('chmod 400 %s/%s' % (keystore_dir, deploy_config["KEY_NAME"]))
 
 	# Step 2: Display keypair
 	table, output = get_table('openstack keypair list', both=True)
+	print "Keypair list:"
 	print output
-	newkey = [entry for entry in table if entry['Name'] == deploy_config['KEY_NAME']][0]
-	print "New key:"
-	print utils.format_dict(newkey)
+	# This piece of code is creating a lot of errors
+	#newkey = [entry for entry in table if entry['Name'] == deploy_config['KEY_NAME']][0]
+	#print "New key:"
+	#print utils.format_dict(newkey)
 
 	if deploy_config["SECURITY_GROUP_NAME"] != None:
 		# Step 3
 		sec_grp = deploy_config['SECURITY_GROUP_NAME']
 		print "Creating new security group: %s" % sec_grp
-		
+
 		give_command('openstack security group create %s' % sec_grp)
+		print poll_output(-1)
 		give_command('openstack security group rule create --proto icmp %s' % sec_grp)
+		print poll_output(-1)
 		give_command('openstack security group rule create --proto tcp --dst-port 22 %s' % sec_grp)
-		
-		print poll_all_outputs()
+		print poll_output(-1)
+
+		# print poll_all_outputs()
 	else:
 		# Step 4
 		print "Using default security group"
 
 		give_command('openstack security group rule create --proto icmp default')
+		print poll_output(-1)
 		give_command('openstack security group rule create --proto tcp --dst-port 22 default')
+		print poll_output(-1)
 
-		print poll_all_outputs()
+		# print poll_all_outputs()
 
 		deploy_config['SECURITY_GROUP_NAME'] = 'default'
 
 	# Step 5: Parse netID
 	table, output = get_table('openstack network list', both=True)
-	net_id = [entry for entry in table if entry['Name'] == deploy_config['NETWORK_NAME']][0]['ID']
-
-	print "deploy_config:"
-	print deploy_config
+	net_id = [entry for entry in table if entry['Name'] == deploy_config['PRIVATE_NETWORK_NAME']][0]['ID']
 
 	# Step 6: Create instance
-	# TODO: what is the security group name when not specified?
-	cmd = 'openstack server create --flavor %s --image %s --nic net-id=%s --security-group %s --key-name %s %s' % (deploy_config['FLAVOR_NAME'],
-		deploy_config['IMAGE_NAME'], net_id, deploy_config['SECURITY_GROUP_NAME'],
-		deploy_config['KEY_NAME'], deploy_config['INSTANCE_NAME'])
-	print "Processing command:"
-	print cmd
-	give_command(cmd)
+	# check if server exists already
+	give_command('openstack server show %s' % deploy_config['INSTANCE_NAME'])
+	output = poll_output(-1)
+	if output == "No server with a name or ID of '%s' exists." % deploy_config['INSTANCE_NAME']:
+		print output
+		cmd = 'openstack server create --flavor %s --image %s --nic net-id=%s --security-group %s --key-name %s %s' % (deploy_config['FLAVOR_NAME'],
+			deploy_config['IMAGE_NAME'], net_id, deploy_config['SECURITY_GROUP_NAME'],
+			deploy_config['KEY_NAME'], deploy_config['INSTANCE_NAME'])
+		print "Creating server w/ command:"
+		print cmd
+		give_command(cmd)
+		print poll_output(-1)
+		#print poll_all_outputs(init_wait=10000) #My addition
+	elif output == "More than one server exists with the name '%s'" % deploy_config['INSTANCE_NAME']:
+		print "[WARNING] %s" % output
+	else:
+		# server exists: don't re-create
+		print "Using exisiting server %s" % deploy_config['INSTANCE_NAME']
+
+	#Creating floating ip
+	time.sleep(20) # added to give time for the spawning to complete
+
+	give_command('openstack floating ip create %s' % deploy_config['PUBLIC_NETWORK_NAME'])
+	output = poll_output(-1)
+	print output
+	time.sleep(30)
+	table = utils.parse_openstack_table(output)
+	ip = [entry['Value'] for entry in table if entry['Field'] == 'floating_ip_address'][0]
+	give_command('openstack server add floating ip %s %s' % (deploy_config['INSTANCE_NAME'], ip))
+	#print poll_output()
+	time.sleep(120)
+
+	command_to_run = 'echo "hello world" > proof.txt'
+	ssh_command = 'sudo ssh -T -oStrictHostKeyChecking=no -i %s/%s ubuntu@%s \'%s\'' % (keystore_dir, deploy_config["KEY_NAME"], ip, command_to_run)
+	print ssh_command
+	give_command(ssh_command)
+	print poll_all_outputs()
+	#give_command('echo "hello world" > proof.txt')	# to be replaced by OAI config
+	#print poll_output(timeout=1000)
+	#give_command('exit')
+	#print poll_output()
+
+	# To remove the key from known host
+	# ssh-keygen -f "/root/.ssh/known_hosts" -R 172.24.4.6
+	# sudo rm "/opt/stack/.ssh/known_hosts"
 
 ##########################
 ## console debug & demo ##
