@@ -45,8 +45,28 @@ cd ../../..
 wget https://open-cells.com/d5138782a8739209ec5760865b1e53b0/opencells-mods-20170823.tgz
 tar xf opencells-mods-20170823.tgz
 
+# Download & Compile the eNB on 17.04
+echo "----- Provision: Downloading & Compiling eNB..."
+git clone https://gitlab.eurecom.fr/oai/openairinterface5g.git
+cd openairinterface5g
+git checkout develop
+
+# Apply downloaded Patch
+echo "----- Provision: Patching eNB..."
+# IMPORTANT: This patch fails and all the further setups fail as they are interactive
+# Unlike apt I cannot pass -y as a flag to hss, mme and spgw
+# TODO: Find a solution to this
+cd ..
+cp opencells-mods/cmake_targets/tools/build_helper openairinterface5g/cmake_targets/tools/build_helper
+cd openairinterface5g
+git checkout develop
+
+source oaienv
+./cmake_targets/build_oai -I       # install SW packages from internet
+
 # Clone OAI EPC
 echo "----- Provision: Cloning OAI EPC..."
+cd ..
 git clone https://gitlab.eurecom.fr/oai/openair-cn.git
 cd openair-cn
 git checkout develop
