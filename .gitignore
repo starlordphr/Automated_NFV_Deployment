@@ -12,3 +12,8 @@
 
 # System generated files
 .DS_Store
+
+# My automation script to work with server
+conn.sh
+up.sh
+down.sh

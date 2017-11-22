@@ -245,7 +245,7 @@ def configure_deployment(vm_name, vm_type, deploy_config):
 
 def configure_oai(vm_name, vm_type, oai_configs):
 	global command_to_run
-	source_file_path = '/home/prajput/Automated_NFV_Deployment/ui/OAI_Scripts/' # TODO : change to relative path
+	source_file_path = '%s/OAI_Scripts/' % work_dir
 	destination_file_path = '/home/ubuntu/'
 
 	for oai_opt in oai_configs:
