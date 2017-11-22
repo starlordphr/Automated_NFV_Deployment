@@ -6,6 +6,7 @@ RED='\033[1;31m'
 GREEN='\033[1;32m'
 YELLOW='\033[1;33m'
 CYAN='\033[1;36m'
+GRAY='\033[1;37m'
 NC='\033[0m' # No Color
 
 print-colored() {
@@ -33,6 +34,11 @@ print-pass() {
 	print-colored $GREEN $*
 }
 export -f print-pass
+
+print-gray() {
+	print-colored $GRAY $*
+}
+export -f print-gray
 
 testcmds() {
 	while [[ $# -ge 1 ]]; do

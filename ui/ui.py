@@ -38,7 +38,7 @@ commands = {
 		"func_name" : "exit_console"
 	},
 	"conf" : {
-		"description" : "Print current configuration (parsed to json format)",
+		"description" : "Show current configuration (in json format)",
 		"func_name" : "show_config"
 	},
 	"demo" : {
