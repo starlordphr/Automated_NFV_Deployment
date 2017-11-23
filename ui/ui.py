@@ -285,7 +285,7 @@ def configure_oai(vm_name, vm_type, oai_configs):
 def ssh_command(command_to_run):
 
 	# To remove the key from known host
-	# ssh-keygen -f "/root/.ssh/known_hosts" -R 172.24.4.6
+	# sudo ssh-keygen -f "/root/.ssh/known_hosts" -R 172.24.4.6
 	# sudo rm "/opt/stack/.ssh/known_hosts"
 
 	ssh_command = 'sudo ssh -T -oStrictHostKeyChecking=no -i %s/%s ubuntu@%s \'%s\'' % (keystore_dir, keyName, ip, command_to_run)
@@ -381,6 +381,8 @@ def create_server(vm_name, deploy_config):
 	if deploy_config["SECURITY_GROUP_NAME"] != None:
 		# Step 3
 		sec_grp = deploy_config['SECURITY_GROUP_NAME']
+		subnet_name = deploy_config['PRIVATE_SUBNET_NAME']
+
 		print "Creating new security group: %s" % sec_grp
 
 		give_command('openstack security group create %s' % sec_grp)
@@ -389,16 +391,34 @@ def create_server(vm_name, deploy_config):
 		print poll_output(-1)
 		give_command('openstack security group rule create --proto tcp --dst-port 22 %s' % sec_grp)
 		print poll_output(-1)
+		give_command('openstack subnet set --dns-nameserver 8.8.8.8 %s' % subnet_name)
+		time.sleep(0.25)
+		# print poll_output(-1)
+		give_command('openstack security group rule create --protocol tcp --dst-port 80:80 --remote-ip 0.0.0.0/0 %s' % sec_grp)
+		time.sleep(0.25)
+		# print poll_output(-1)
+		give_command('openstack security group rule create --protocol tcp --dst-port 443:443 --remote-ip 0.0.0.0/0 %s' % sec_grp)
+		time.sleep(0.25)
+		# print poll_output(-1)
 
 		# print poll_all_outputs()
 	else:
 		# Step 4
-		print "Using default security group"
+		print "Using default security group and private-subnet"
 
 		give_command('openstack security group rule create --proto icmp default')
 		print poll_output(-1)
 		give_command('openstack security group rule create --proto tcp --dst-port 22 default')
 		print poll_output(-1)
+		give_command('openstack subnet set --dns-nameserver 8.8.8.8 private-subnet')
+		time.sleep(0.25)
+		# print poll_output(-1)
+		give_command('openstack security group rule create --protocol tcp --dst-port 80:80 --remote-ip 0.0.0.0/0 default')
+		time.sleep(0.25)
+		# print poll_output(-1)
+		give_command('openstack security group rule create --protocol tcp --dst-port 443:443 --remote-ip 0.0.0.0/0 default')
+		time.sleep(0.25)
+		# print poll_output(-1)
 
 		# print poll_all_outputs()
 

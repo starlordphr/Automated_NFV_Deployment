@@ -19,6 +19,7 @@ SERVER_CONFIG = {
 	"IMAGE_NAME" : "",
 	"PRIVATE_NETWORK_NAME" : "",
 	"PUBLIC_NETWORK_NAME" : "",
+	"PRIVATE_SUBNET_NAME" : "optional",
 	"SECURITY_GROUP_NAME" : "optional",
 	"KEY_NAME" : "optional",
 	"INSTANCE_NAME" : ""
