@@ -2,7 +2,7 @@
 
 source utils.sh
 
-print-gray "(Note: if you have set up MySQL before, please set the default password to be your MySQL's root password)"
+printf "\033[1;37m(Note: if you have set up MySQL before, please set the default password to be your MySQL's root password)\033[0m\n" # print in gray
 echo -n "Please specify a default password for all services: "
 read -s passwd
 echo

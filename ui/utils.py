@@ -7,6 +7,7 @@ class bcolors:
 	GREEN='\033[32m'
 	YELLOW='\033[33m'
 	CYAN='\033[36m'
+	GRAY='\033[37m'
 	NC='\033[0m' # No Color
 
 	# styles
