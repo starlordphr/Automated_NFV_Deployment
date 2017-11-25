@@ -104,7 +104,7 @@ def main():
 		utils.print_highlight("====Deploying %s====" % vm)
 		cfg = configs.sla_configs[vm]
 		configure_deployment(vm, cfg['vm_type'], cfg['deploy_config'])
-		# configure_oai(vm, cfg['vm_type'], cfg['oai_configs'])
+		configure_oai(vm, cfg['vm_type'], cfg['oai_configs'])
 
 	# user console
 	while console_running:
@@ -146,9 +146,7 @@ def get_returncode():
 		return output
 
 # timeout will be at least how long we will have to wait
-def poll_all_outputs(timeout=5000, init_wait=3000):
-	print "Please wait patiently as we are trying to fetch some potential output..."
-
+def poll_all_outputs(timeout=5000, init_wait=2000):
 	time.sleep(init_wait / 1000.0)
 
 	has_output = True
@@ -395,15 +393,12 @@ def create_server(vm_name, deploy_config):
 		print poll_output(-1)
 		give_command('openstack subnet set --dns-nameserver 8.8.8.8 %s' % subnet_name)
 		time.sleep(0.25)
-		# print poll_output(-1)
 		give_command('openstack security group rule create --protocol tcp --dst-port 80:80 --remote-ip 0.0.0.0/0 %s' % sec_grp)
-		time.sleep(0.25)
-		# print poll_output(-1)
+		print poll_output(-1)
 		give_command('openstack security group rule create --protocol tcp --dst-port 443:443 --remote-ip 0.0.0.0/0 %s' % sec_grp)
-		time.sleep(0.25)
-		# print poll_output(-1)
+		print poll_output(-1)
 
-		print poll_all_outputs()
+		# print poll_all_outputs()
 	else:
 		# Step 4
 		print "Using default security group and private-subnet"
@@ -414,15 +409,12 @@ def create_server(vm_name, deploy_config):
 		print poll_output(-1)
 		give_command('openstack subnet set --dns-nameserver 8.8.8.8 private-subnet')
 		time.sleep(0.25)
-		# print poll_output(-1)
 		give_command('openstack security group rule create --protocol tcp --dst-port 80:80 --remote-ip 0.0.0.0/0 default')
-		time.sleep(0.25)
-		# print poll_output(-1)
+		print poll_output(-1)
 		give_command('openstack security group rule create --protocol tcp --dst-port 443:443 --remote-ip 0.0.0.0/0 default')
-		time.sleep(0.25)
-		# print poll_output(-1)
+		print poll_output(-1)
 
-		print poll_all_outputs()
+		# print poll_all_outputs()
 
 		deploy_config['SECURITY_GROUP_NAME'] = 'default'
 
