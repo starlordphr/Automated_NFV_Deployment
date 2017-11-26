@@ -25,6 +25,12 @@ def print_error(msg):
 def print_warning(msg):
 	print "%s%s%s" % (bcolors.YELLOW, msg, bcolors.NC)
 
+def print_pass(msg):
+	print "%s%s%s" % (bcolors.GREEN, msg, bcolors.NC)
+
+def print_comment(msg):
+	print "%s%s%s" % (bcolors.GRAY, msg, bcolors.NC)
+
 def _is_empty(obj):
 	return obj == None or len(obj) == 0
 

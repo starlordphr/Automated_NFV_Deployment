@@ -420,6 +420,8 @@ def create_server(vm_name, deploy_config):
 
 	# Step 5: Parse netID
 	table, output = get_table('openstack network list', both=True)
+	print "Current network list:"
+	print output
 	net_id = [entry for entry in table if entry['Name'] == deploy_config['PRIVATE_NETWORK_NAME']][0]['ID']
 
 	# Step 6: Create instance
