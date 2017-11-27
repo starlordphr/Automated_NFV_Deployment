@@ -336,7 +336,7 @@ def create_server(vm_name, deploy_config):
 		image_file = '%s/images/ubuntu-17.04.img' % home_dir
 		if not os.path.isfile(image_file):
 			rc = subprocess.call(['wget', '-O', image_file,
-				'https://cloud-images.ubuntu.com/zesty/20171110/zesty-server-cloudimg-amd64.img'])
+				'https://cloud-images.ubuntu.com/zesty/current/zesty-server-cloudimg-amd64.img'])
 			# check return code: (may not be connected to internet)
 		else:
 			print "Image file: using exisiting file on disk: %s" % image_file
