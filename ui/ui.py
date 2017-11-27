@@ -391,14 +391,14 @@ def create_server(vm_name, deploy_config):
 		print poll_output(-1)
 		give_command('openstack security group rule create --proto tcp --dst-port 22 %s' % sec_grp)
 		print poll_output(-1)
-		give_command('openstack subnet set --dns-nameserver 8.8.8.8 %s' % subnet_name)
-		time.sleep(0.25)
 		give_command('openstack security group rule create --protocol tcp --dst-port 80:80 --remote-ip 0.0.0.0/0 %s' % sec_grp)
 		print poll_output(-1)
 		give_command('openstack security group rule create --protocol tcp --dst-port 443:443 --remote-ip 0.0.0.0/0 %s' % sec_grp)
 		print poll_output(-1)
-
-		# print poll_all_outputs()
+		give_command('openstack subnet set --dns-nameserver 8.8.8.8 %s' % subnet_name)
+		time.sleep(0.25)
+		print poll_all_outputs()
+		
 	else:
 		# Step 4
 		print "Using default security group and private-subnet"
@@ -407,14 +407,13 @@ def create_server(vm_name, deploy_config):
 		print poll_output(-1)
 		give_command('openstack security group rule create --proto tcp --dst-port 22 default')
 		print poll_output(-1)
-		give_command('openstack subnet set --dns-nameserver 8.8.8.8 private-subnet')
-		time.sleep(0.25)
 		give_command('openstack security group rule create --protocol tcp --dst-port 80:80 --remote-ip 0.0.0.0/0 default')
 		print poll_output(-1)
 		give_command('openstack security group rule create --protocol tcp --dst-port 443:443 --remote-ip 0.0.0.0/0 default')
 		print poll_output(-1)
-
-		# print poll_all_outputs()
+		give_command('openstack subnet set --dns-nameserver 8.8.8.8 private-subnet')
+		time.sleep(0.25)
+		print poll_all_outputs()
 
 		deploy_config['SECURITY_GROUP_NAME'] = 'default'
 
