@@ -98,6 +98,17 @@ def main():
 	# first commands to child bash
 	init()
 
+	# check if openstack is up at all
+	give_command('openstack image list') # should have cirros by default
+	output = poll_output(timeout=15000)
+	if len(output) == 0:
+		raise RuntimeError("Openstack timed out!")
+	else:
+		rc = get_returncode()
+		if rc != 0:
+			utils.print_error(output)
+			raise RuntimeError("Openstack is not up! Please make sure you have executed 'stack.sh' as stack user!")
+
 	# process according to SLA specification
 	print "Processing SLA configuration..."
 	for vm in configs.sla_configs:
