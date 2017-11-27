@@ -245,7 +245,7 @@ def configure_deployment(vm_name, vm_type, deploy_config):
 
 def configure_oai(vm_name, vm_type, oai_configs):
 	global command_to_run
-	source_file_path = '%s/OAI_Scripts/' % work_dir
+	source_file_path = '%s/OAI_Scripts/' % subprocess.check_output(['pwd']).strip()
 	destination_file_path = '/home/ubuntu/'
 
 	for oai_opt in oai_configs:
@@ -419,6 +419,7 @@ def create_server(vm_name, deploy_config):
 		deploy_config['SECURITY_GROUP_NAME'] = 'default'
 
 	# Step 5: Parse netID
+	print poll_all_outputs()
 	table, output = get_table('openstack network list', both=True)
 	net_id = [entry for entry in table if entry['Name'] == deploy_config['PRIVATE_NETWORK_NAME']][0]['ID']
 
