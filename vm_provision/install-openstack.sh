@@ -26,3 +26,4 @@ echo "DATABASE_PASSWORD=$passwd" >> local.conf
 echo "RABBIT_PASSWORD=$passwd" >> local.conf
 echo "SERVICE_PASSWORD=$passwd" >> local.conf
 #echo "HOST_IP=192.168.1.118" >> local.conf  # no need for this
+./stack.sh

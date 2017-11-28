@@ -3,10 +3,11 @@ import numpy as np
 import time
 
 class PlotScheme:
-	bgcolor='white'
-	linecolor='blue'
+	bgcolor='black'
+	linecolor='green'
 
 _xspan, _yspan = 0,0
+_xsize = 256
 _curr_line = None
 is_open = False
 
@@ -37,12 +38,15 @@ def set_texts(xlabel=None, ylabel=None, caption=None):
 		plt.title(caption)
 		_caption = caption
 
-def open_window(x_span=(0,1), y_span=(0,30)):
+def open_window(x_span=(0,1), y_span=(0,30), x_size=None):
 	# initialization function
-	global _fig, _ax, is_open, _footnote
+	global _fig, _ax, is_open, _footnote, _xsize
 	if is_open:
 		print "[visualizer.py] Window already opened!"
 		return
+
+	if type(x_size) == int:
+		_xsize = x_size
 
 	_fig, _ax = plt.subplots()
 	_ax.set_axis_bgcolor(PlotScheme.bgcolor)
@@ -53,7 +57,7 @@ def open_window(x_span=(0,1), y_span=(0,30)):
 	_footnote = plt.text(0, _yspan[1] - yrange * 1.28, "")
 
 	plt.ion()
-	update_plot(np.zeros(256))
+	update_plot(np.zeros(_xsize))
 	is_open = True
 
 def close_window():
@@ -62,7 +66,7 @@ def close_window():
 		plt.close()
 		is_open = False
 
-def update_plot(data, footnote=None):
+def update_plot(data, footnote=None, padding=True):
 	global _curr_line, _footnote
 
 	if _curr_line != None:
@@ -70,6 +74,10 @@ def update_plot(data, footnote=None):
 			_curr_line.pop(0).remove()
 
 	x_span = np.linspace(_xspan[0], _xspan[1], len(data))
+	if padding:
+		data = list(data)	# in case data is numpy array
+		x_span = np.linspace(_xspan[0], _xspan[1], _xsize)
+		data += [0] * (_xsize - len(data))
 	_curr_line = plt.plot(x_span, data, color=PlotScheme.linecolor)
 
 	if footnote != None:
