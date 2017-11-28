@@ -98,6 +98,20 @@ def main():
 	# first commands to child bash
 	init()
 
+	# check available RAM and warn user if RAM is not enough
+	free_ram = get_available_ram()
+	if free_ram < 0:
+		utils.print_warning("An error occurred when checking RAM. Please check available RAM by yourself.")
+	elif free_ram < 4096:
+		utils.print_error("WARNING!!! Less than 4GB of RAM available!")
+		# too long (lol)
+		print "%s %s %s" % ("It is recommended to have at least 4GB of free RAM for VM deployment.",
+			"Insufficient RAM may result in deployment error.",
+			"Do you wish to continue (y/n)?"),
+		s = raw_input()
+		if s[0].lower() == 'n':
+			raise SystemExit("Aborted.")
+
 	# check if openstack is up at all
 	give_command('openstack image list') # should have cirros by default
 	output = poll_output(timeout=15000)
@@ -214,7 +228,7 @@ def parse_args():
 	return args
 
 def init():
-	global home_dir
+	global home_dir, work_dir
 	print "Initialzing console..."
 
 	# get working directory of THIS SCRIPT (do not confuse)
@@ -245,6 +259,31 @@ def get_table(cmd, both=False):
 	else:
 		return utils.parse_openstack_table(output)
 
+# unit: MB; if an error occurs, returns -1
+def get_available_ram():
+	proc = subprocess.Popen(["free", "-m"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	out, err = proc.communicate()
+	if proc.returncode == 0:
+		'''
+Example:
+              total        used        free      shared  buff/cache   available
+Mem:          15993       10097         321         158        5574        5244
+Swap:         16336         511       15825
+		'''
+		# parsing table
+		table = {}
+		lines = out.strip().split('\n')
+		titles = lines[0].split()
+		for line in lines[1:]:
+			line = line.split()
+			table[line[0]] = line[1:]
+		
+		# getting ram
+		free_ram = int(table['Mem:'][titles.index('free')])
+		return free_ram
+	else:
+		return -1
+
 ##############################
 ## configuration automation ##
 ##############################
@@ -256,7 +295,7 @@ def configure_deployment(vm_name, vm_type, deploy_config):
 
 def configure_oai(vm_name, vm_type, oai_configs):
 	global command_to_run
-	source_file_path = '%s/OAI_Scripts/' % subprocess.check_output(['pwd']).strip()
+	source_file_path = '%s/OAI_Scripts/' % work_dir
 	destination_file_path = '/home/ubuntu/'
 
 	for oai_opt in oai_configs:
@@ -315,9 +354,7 @@ def scp_command(source_file_path, destination_file_path):
 	print poll_all_outputs()
 
 def create_server(vm_name, deploy_config):
-	global keystore_dir
-	global keyName
-	global ip
+	global keystore_dir, keyName, ip
 
 	# create images folder
 	img_dir = '%s/images' % home_dir
