@@ -31,6 +31,7 @@ home_dir = ""
 commands = {
 	"help" : {
 		"description" : "Show help message",
+		"usage" : "help [command]\n* If a command is specified, show help message of that command.",
 		"func_name" : "show_help"
 	},
 	"exit" : {
@@ -41,9 +42,10 @@ commands = {
 		"description" : "Show current configuration (in json format)",
 		"func_name" : "show_config"
 	},
-	"demo" : {
-		"description" : "Demonostrate parsing a table",
-		"func_name" : "demo_parse_table"
+	"exec" : {
+		"description" : "Send a command to subshell and execute it",
+		"usage" : "exec command",
+		"func_name" : "send_cmd_and_exec"
 	}
 }
 console_running = True
@@ -101,7 +103,7 @@ def main():
 	# check available RAM and warn user if RAM is not enough
 	free_ram = get_available_ram()
 	if free_ram < 0:
-		utils.print_warning("An error occurred when checking RAM. Please check available RAM by yourself.")
+		utils.print_warning("[WARNING] An error occurred when checking RAM. Please check available RAM by yourself.")
 	elif free_ram < 4096:
 		utils.print_error("WARNING!!! Less than 4GB of RAM available!")
 		# too long (lol)
@@ -112,24 +114,25 @@ def main():
 		if s[0].lower() == 'n':
 			raise SystemExit("Aborted.")
 
-	# check if openstack is up at all
-	give_command('openstack image list') # should have cirros by default
-	output = poll_output(timeout=15000)
-	if len(output) == 0:
-		raise RuntimeError("Openstack timed out!")
-	else:
-		rc = get_returncode()
-		if rc != 0:
-			utils.print_error(output)
-			raise RuntimeError("Openstack is not up! Please make sure you have executed 'stack.sh' as stack user!")
+	if not args.test_console:
+		# check if openstack is up at all
+		give_command('openstack image list') # should have cirros by default
+		output = poll_output(timeout=15000)
+		if len(output) == 0:
+			raise RuntimeError("Openstack timed out!")
+		else:
+			rc = get_returncode()
+			if rc != 0:
+				utils.print_error(output)
+				raise RuntimeError("Openstack is not up! Please make sure you have executed 'stack.sh' as stack user!")
 
-	# process according to SLA specification
-	print "Processing SLA configuration..."
-	for vm in configs.sla_configs:
-		utils.print_highlight("====Deploying %s====" % vm)
-		cfg = configs.sla_configs[vm]
-		configure_deployment(vm, cfg['vm_type'], cfg['deploy_config'])
-		configure_oai(vm, cfg['vm_type'], cfg['oai_configs'])
+		# process according to SLA specification
+		print "Processing SLA configuration..."
+		for vm in configs.sla_configs:
+			utils.print_highlight("====Deploying %s====" % vm)
+			cfg = configs.sla_configs[vm]
+			configure_deployment(vm, cfg['vm_type'], cfg['deploy_config'])
+			configure_oai(vm, cfg['vm_type'], cfg['oai_configs'])
 
 	# user console
 	while console_running:
@@ -172,6 +175,8 @@ def get_returncode():
 
 # timeout will be at least how long we will have to wait
 def poll_all_outputs(timeout=5000, init_wait=2000):
+	print "Please wait patiently as we're polling potential outputs..."
+
 	time.sleep(init_wait / 1000.0)
 
 	has_output = True
@@ -187,25 +192,39 @@ def poll_all_outputs(timeout=5000, init_wait=2000):
 				historical_output += "\n%s" % output
 	return historical_output
 
-# just swiftly poll all outputs
-def clear_historical_outputs():
-	# Assumes historical outputs are ready to send
-	# on child's stdout or stderr
-	return poll_all_outputs(timeout=200, init_wait=0)
+# print to screen as polling all potential output
+def responsive_poll(timeout=5000):
+	has_output = True
+	while has_output:
+		has_output = False
+		output = poll_output(timeout)
+		if len(output) > 0:
+			has_output = True
+			print output
 
-def poll_all_quick_outputs():
-	# Assumes only last command takes a long time
-	output = poll_output()
-	output = "%s\n%s" % (output, clear_historical_outputs())
-	return output
+# assumes all historical outputs are ready to send on child's stdout or stderr
+def clear_historical_outputs():
+	# just swiftly poll all outputs...
+	return poll_all_outputs(timeout=200, init_wait=0)
 
 ###########################
 ## console command funcs ##
 ###########################
 
 def show_help(args=[]):
-	for opt in commands:
-		print "%-16s%s" % (opt, commands[opt]['description'])
+	if len(args) == 0:
+		for opt in commands:
+			print "%-16s%s" % (opt, commands[opt]['description'])
+	else:
+		for arg in args:
+			if commands.has_key(arg):
+				if commands[arg].has_key('usage'):
+					print "Usage - %s:" % arg
+					print commands[arg]['usage']
+				else:
+					print "(No usage information for '%s'. Probably doesn't take any arguments.)" % arg
+			else:
+				print "--Command '%s' doesn't exist!--" % arg
 
 def exit_console(args=[]):
 	global console_running
@@ -214,6 +233,21 @@ def exit_console(args=[]):
 
 def show_config(args=[]):
 	print utils.format_dict(configs.sla_configs)
+
+def send_cmd_and_exec(args=[]):
+	print args
+
+	if len(args) == 0:
+		show_help(['exec'])
+		return
+
+	if type(args) == list:
+		args = ' '.join(args)
+	if type(args) == str:
+		print "Giving command: %s" % args
+		give_command(args)
+		# responsive_poll()
+		print poll_output()
 
 ###########################
 ## console backend funcs ##
@@ -224,6 +258,8 @@ def parse_args():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--sla', action='store', required=True,
 		metavar='SLA_config_file', help='specify SLA config file')
+	parser.add_argument('--test-console', action='store_true', required=False,
+		help='skip configuration, just test console (for dev use)')
 	args = parser.parse_args()
 	return args
 
@@ -261,27 +297,30 @@ def get_table(cmd, both=False):
 
 # unit: MB; if an error occurs, returns -1
 def get_available_ram():
-	proc = subprocess.Popen(["free", "-m"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-	out, err = proc.communicate()
-	if proc.returncode == 0:
-		'''
+	try:
+		proc = subprocess.Popen(["free", "-m"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		out, err = proc.communicate()
+		if proc.returncode == 0:
+			'''
 Example:
               total        used        free      shared  buff/cache   available
 Mem:          15993       10097         321         158        5574        5244
 Swap:         16336         511       15825
-		'''
-		# parsing table
-		table = {}
-		lines = out.strip().split('\n')
-		titles = lines[0].split()
-		for line in lines[1:]:
-			line = line.split()
-			table[line[0]] = line[1:]
-		
-		# getting ram
-		free_ram = int(table['Mem:'][titles.index('free')])
-		return free_ram
-	else:
+			'''
+			# parsing table
+			table = {}
+			lines = out.strip().split('\n')
+			titles = lines[0].split()
+			for line in lines[1:]:
+				line = line.split()
+				table[line[0]] = line[1:]
+			
+			# getting ram
+			free_ram = int(table['Mem:'][titles.index('free')])
+			return free_ram
+		else:
+			return -1
+	except:
 		return -1
 
 ##############################
@@ -329,12 +368,19 @@ def configure_oai(vm_name, vm_type, oai_configs):
 		scp_command(source_file_path, destination_file_path)
 		time.sleep(0.25)
 
+		'''
 		command_to_run = 'pidof apt-get | xargs kill -9'
 		ssh_command(command_to_run)
 		time.sleep(0.25)
 
 		command_to_run = 'sudo bash %s' % destination_file_path
 		ssh_command(command_to_run)
+		'''
+
+		give_command('ssh ubuntu@%s' % ip)
+		print poll_output(-1)
+		give_command('ls')
+		print poll_output(-1)
 
 def ssh_command(command_to_run):
 
@@ -512,24 +558,9 @@ def create_server(vm_name, deploy_config):
 	utils.print_pass("2-minute wait...")
 	time.sleep(120) # TODO: check in a while loop to see if floating ip is added
 
-
-
 ##########################
 ## console debug & demo ##
 ##########################
-
-def demo():
-	demo_cmds = ['sudo su - stack', 'whoami', 'cd devstack', 'ls']
-	for cmd in demo_cmds:
-		give_command(cmd)
-		has_output = False
-		for fd, event in polling_pool.poll(100):
-			has_output = True
-			output = os.read(fd, BUF_SIZE)
-			print "Command '%s' gives output:" % cmd
-			print output
-		if not has_output:
-			print "Command '%s' gives no output..." % cmd
 
 def demo_parse_table(args=[]):
 	print "Command: openstack flavor list"
