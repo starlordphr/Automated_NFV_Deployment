@@ -377,11 +377,6 @@ def configure_oai(vm_name, vm_type, oai_configs):
 		ssh_command(command_to_run)
 		'''
 
-		give_command('ssh ubuntu@%s' % ip)
-		print poll_output(-1)
-		give_command('ls')
-		print poll_output(-1)
-
 def ssh_command(command_to_run):
 
 	# To remove the key from known host
