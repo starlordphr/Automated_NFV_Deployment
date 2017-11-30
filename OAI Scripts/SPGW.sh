@@ -79,6 +79,6 @@ git apply ../opencells-mods/EPC.patch
 echo "----- Provision: Installing third party SW for EPC..."
 source oaienv
 cd scripts
-./../../SPGW_expect  #Semi-Automatic
+./../../SPGW_expect.exp  #Semi-Automatic
 
 ./build_spgw
