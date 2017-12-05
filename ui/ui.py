@@ -538,8 +538,8 @@ def configure_oai(vm_name, vm_type, oai_configs):
 			destination_file_path += 'SPGW.sh'
 
 
-		scp_command(source_file_path, destination_file_path)
-		time.sleep(0.25)
+		# scp_command(source_file_path, destination_file_path)
+		# time.sleep(0.25)
 
 		'''
 		command_to_run = 'pidof apt-get | xargs kill -9'
