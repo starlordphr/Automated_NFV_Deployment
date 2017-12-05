@@ -46,6 +46,23 @@ commands = {
 		"description" : "Send a command to child bash and execute it",
 		"usage" : "exec command",
 		"func_name" : "send_cmd_and_exec"
+	},
+	"deploy" : {
+		"description" : "Deploy (more) VMs by given SLA file",
+		"usage" : "deploy sla_file_name",
+		"func_name" : "usrcmd_deploy_vm"
+	},
+	"delete" : {
+		"description" : "Delete created VM instance",
+		"usage" : ("%s\n\t%s\n%s\n\t%s\n%s\n\t%s\n* %s\n") % ("delete --vm vm_name",
+								"Delete VM of given VM name. Must be in current configuration.",
+							"delete --instance instance_name [--key key_name]",
+								("%s %s") % ("Delete server instance by explicitly giving instance and key name.",
+									"If key name isn't given, use default key name."),
+							"delete --all",
+								"Delete all VMs in current configuration",
+							"You can check current configuration by using 'conf' command"),
+		"func_name" : "usrcmd_delete_vm"
 	}
 }
 console_running = True
@@ -65,7 +82,8 @@ def main():
 
 	# process args to intialize configs module
 	# will raise exception if input is ill-formatted
-	configs.parse_sla_config(args.sla)
+	if (args.sla != None):
+		configs.parse_sla_config(args.sla)
 
 	# fork child bash
 	pid = os.fork()
@@ -114,25 +132,21 @@ def main():
 		if s[0].lower() == 'n':
 			raise SystemExit("Aborted.")
 
-	if not args.test_console:
-		# check if openstack is up at all
-		give_command('openstack image list') # should have cirros by default
-		output = poll_output(timeout=15000)
-		if len(output) == 0:
-			raise RuntimeError("Openstack timed out!")
-		else:
-			rc = get_returncode()
-			if rc != 0:
-				utils.print_error(output)
-				raise RuntimeError("Openstack is not up! Please make sure you have executed 'stack.sh' as stack user!")
+	# check if openstack is up at all
+	give_command('openstack image list') # should have cirros by default
+	output = poll_output(timeout=15000)
+	if len(output) == 0:
+		raise RuntimeError("Openstack timed out!")
+	else:
+		rc = get_returncode()
+		if rc != 0:
+			utils.print_error(output)
+			raise RuntimeError("Openstack is not up! Please make sure you have executed 'stack.sh' as stack user!")
 
-		# process according to SLA specification
-		print "Processing SLA configuration..."
-		for vm in configs.sla_configs:
-			utils.print_highlight("====Deploying %s====" % vm)
-			cfg = configs.sla_configs[vm]
-			configure_deployment(vm, cfg['vm_type'], cfg['deploy_config'])
-			configure_oai(vm, cfg['vm_type'], cfg['oai_configs'])
+	# process according to SLA specification
+	print "Processing SLA configuration..."
+	for vm in configs.sla_configs:
+		deploy_vm(vm)
 
 	# user console
 	while console_running:
@@ -213,9 +227,12 @@ def clear_historical_outputs():
 
 def show_help(args=[]):
 	if len(args) == 0:
+		# list all commands available
 		for opt in commands:
 			print "%-16s%s" % (opt, commands[opt]['description'])
+		print "Use 'help command_name' to check usage of each command."
 	else:
+		# show help for specified command
 		for arg in args:
 			if commands.has_key(arg):
 				if commands[arg].has_key('usage'):
@@ -238,6 +255,7 @@ def show_config(args=[]):
 
 def send_cmd_and_exec(args=[]):
 	if len(args) == 0:
+		# wrong usage
 		show_help(['exec'])
 		return
 
@@ -249,6 +267,38 @@ def send_cmd_and_exec(args=[]):
 		# responsive_poll()
 		print poll_output()
 
+def usrcmd_deploy_vm(args=[]):
+	if len(args) != 1:
+		# wrong usage
+		show_help(['deploy'])
+		return
+
+	new_vms = configs.parse_sla_config(args[0])
+	for vm in new_vms:
+		deploy_vm(vm)
+
+def usrcmd_delete_vm(args=[]):
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--all', action='store_true', required=False)
+	parser.add_argument('--vm', action='store', required=False)
+	parser.add_argument('--instance', action='store', required=False)
+	parser.add_argument('--key', action='store', required=False)
+	args = parser.parse_args(args)
+
+	if args.all:
+		for vm in configs.sla_configs:
+			delete_vm(vm)
+	elif args.vm != None:
+		delete_vm(args.vm)
+	elif args.instance != None:
+		key = '%s_key' % args.instance
+		if args.key != None:
+			key = args.key
+		delete_server_instance(args.instance, key)
+	else:
+		# wrong usage
+		show_help(['delete'])
+
 ###########################
 ## console backend funcs ##
 ###########################
@@ -256,10 +306,8 @@ def send_cmd_and_exec(args=[]):
 def parse_args():
 	# parse args
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--sla', action='store', required=True,
+	parser.add_argument('--sla', action='store', required=False,
 		metavar='SLA_config_file', help='specify SLA config file')
-	parser.add_argument('--test-console', action='store_true', required=False,
-		help='skip configuration, just test console (for dev use)')
 	args = parser.parse_args()
 	return args
 
@@ -278,6 +326,53 @@ def init():
 	give_command('cd devstack')
 	give_command('source openrc')    # may have output
 	print poll_output(timeout=2000)
+
+def deploy_vm(vm):
+	utils.print_highlight("====Deploying %s====" % vm)
+	cfg = configs.sla_configs[vm]
+	configure_deployment(vm, cfg['vm_type'], cfg['deploy_config'])
+	configure_oai(vm, cfg['vm_type'], cfg['oai_configs'])
+
+def delete_vm(vm):
+	if not  configs.sla_configs.has_key(vm):
+		utils.print_error("There isn't a VM named '%s'" % vm)
+		print "All available VM names:"
+		print '\n'.join(configs.keys())
+		return
+
+	utils.print_highlight("====Deleting %s====" % vm)
+	cfg = configs.sla_configs[vm]
+	utils.print_highlight("Deleting vm: %s" % vm)
+	if cfg['vm_type'] == "server":
+		delete_server_instance(cfg['deploy_config']['INSTANCE_NAME'], cfg['deploy_config']['KEY_NAME'], vm)
+	else:
+		utils.print_warning("Cannot delete - Unknown or yet-to-implement VM type: %s" % cfg['vm_type'])
+
+def delete_server_instance(instance_name, key_name, vm_name=None):
+	# make sure we can entrust that given vm_name is correct
+
+	cfgs = configs.sla_configs
+	if vm_name == None or not cfgs.has_key(vm_name) or \
+	not cfgs[vm_name]['deploy_config']['INSTANCE_NAME'] == instance_name or \
+	not cfgs[vm_name]['deploy_config']['KEY_NAME'] == key_name:
+		vm_name = None
+
+	if vm_name == None:
+		# try to find vm_name
+		for vm in cfgs:
+			dpl_cfg = cfgs[vm]['deploy_config']
+			if dpl_cfg['INSTANCE_NAME'] == instance_name and dpl_cfg['KEY_NAME'] == key_name:
+				vm_name = vm
+
+	print "Removing server instance..."
+	give_command("openstack server delete %s" % instance_name)
+	print poll_all_outputs()
+	print "Removing associated keypair..."
+	give_command("openstack keypair delete %s" % key_name)
+	print poll_all_outputs()
+
+	if vm_name != None:
+		configs.sla_configs.pop(vm_name)
 
 def get_cmd_func(cmd):
 	if type(cmd) != str or cmd not in commands:

@@ -37,6 +37,7 @@ OAI_CONFIGS = {
 	'spgw' : {}
 }
 
+# returns list of new vms put into config dict
 def parse_sla_config(fname):
 	# global all constants
 	global _cfg, sla_configs
@@ -51,7 +52,13 @@ def parse_sla_config(fname):
 	if not _cfg.has_section('meta'):
 		raise RuntimeError("[configs.py] %s: config file missing 'meta' section!" % fname)
 
+	new_vms = []
 	for vm_name, vm_type in _cfg.items('meta'):
+		if vm_name in sla_configs:
+			print "[configs.py][WARNING] %s: duplicate VM, ignored" % vm_name
+			continue
+		new_vms.append(vm_name)
+
 		# get deployment configuration for vm
 		deploy_config = _get_deploy_config(vm_name, vm_type)
 
@@ -63,6 +70,8 @@ def parse_sla_config(fname):
 			"deploy_config" : deploy_config,
 			"oai_configs" : oai_configs
 		}
+
+	return new_vms
 
 def _try_get_option(sect, opt, data_type='str', optional=False):
 	data_type = data_type.lower()
