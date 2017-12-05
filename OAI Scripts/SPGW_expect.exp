@@ -33,10 +33,10 @@ set timeout -1
 spawn ./build_spgw -i
 match_max 100000
 
-expect -exact "Do you want to continue? \[Y/n\] "
-send -- "y\r"
-expect -exact "Do you want to continue? \[Y/n\] "
-send -- "y\r"
+#expect -exact "Do you want to continue? \[Y/n\] "
+#send -- "y\r"
+#expect -exact "Do you want to continue? \[Y/n\] "
+#send -- "y\r"
 expect -exact "Do you want to continue? \[Y/n\] "
 send -- "y\r"
 expect -exact "<No>"

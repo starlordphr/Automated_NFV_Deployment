@@ -22,7 +22,7 @@ git config --global user.name "starlordphr"
 git config --global user.email "prashanthrajput@ucla.edu"
 
 #Install expect
-sudo apt-get -y install expect
+#sudo apt-get -y install expect
 
 # Add the OAI repository as authorized remote system
 #echo "----- Provision: Adding the OAI repository as authorized remote system..."
@@ -78,7 +78,7 @@ git apply ../opencells-mods/EPC.patch
 # Install third party SW for EPC
 echo "----- Provision: Installing third party SW for EPC..."
 source oaienv
-cd scripts
-./../../SPGW_expect.exp  #Semi-Automatic
-
-./build_spgw
+cd ../
+sudo apt install -y expect
+#./MME_expect.exp
+#./openair-cn/scripts/build_hss
