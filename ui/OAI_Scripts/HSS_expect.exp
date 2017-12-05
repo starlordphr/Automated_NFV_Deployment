@@ -48,6 +48,9 @@ match_max 100000
 expect -exact "Do you want to continue? \[Y/n\] "
 sleep 3
 send -- "y\r"
+expect -exact "Do you want to continue? \[Y/n\] "
+sleep 3
+send -- "y\r"
 expect -exact "New password for the MySQL \"root\" user:"
 sleep 3
 send -- "p"
