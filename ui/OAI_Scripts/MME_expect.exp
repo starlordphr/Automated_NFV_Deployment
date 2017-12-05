@@ -46,17 +46,24 @@ set timeout -1
 spawn ./openair-cn/scripts/build_mme -i
 match_max 100000
 expect -exact "Do you want to continue? \[Y/n\] "
+sleep 3
 send -- "y\r"
 expect -exact "Do you want to install freeDiameter 1.2.0 ? <y/N> "
+sleep 3
 send -- "n\r"
 expect -exact "Do you want to install asn1c rev 1516 patched? <y/N> "
+sleep 3
 send -- "n\r"
 expect -exact "Do you want to continue? \[Y/n\] "
+sleep 3
 send -- "y\r"
 expect -exact "Do you want to install libgtpnl ? <y/N> "
+sleep 3
 send -- "y\r"
 expect -exact "Do you want to continue? \[Y/n\] "
+sleep 3
 send -- "y\r"
 expect -exact "<No>"
+sleep 3
 send -- "\r"
 expect eof
