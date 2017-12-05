@@ -52,6 +52,7 @@ def _parse_row(row, colcount=-1):
 			ret.append('')
 	return ret
 
+# returns an array of rows, each element is a dict of title -> value
 def parse_openstack_table(s):
 	'''
 	Example format:

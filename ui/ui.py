@@ -48,6 +48,13 @@ commands = {
 		"usage" : "exec command",
 		"func_name" : "send_cmd_and_exec"
 	},
+	"list" : {
+		"description" : "A few things you can list...",
+		"usage" : "list option\noptions:\n" + \
+				"\t%-8s%s" % ("ip", "shows a list of instance names mapped to floating ip") + \
+				"\t%-8s%s" % ("server", "shows list of servers"),
+		"func_name" : "list_things"
+	},
 	"deploy" : {
 		"description" : "Deploy (more) VMs by given SLA file",
 		"usage" : "deploy sla_file_name",
@@ -184,8 +191,10 @@ def get_returncode():
 	output = poll_output(timeout=1000)
 	if output.isdigit():
 		return int(output)
+	elif len(output) == 0:
+		return -1
 	else:
-		print "[WARNING] Return code not int: %s" % output
+		print "[WARNING] get_returncode() returned other output: %s" % output
 		return output
 
 # timeout will be at least how long we will have to wait
@@ -267,6 +276,21 @@ def send_cmd_and_exec(args=[]):
 		give_command(args)
 		# responsive_poll()
 		print poll_output()
+
+def list_things(args=[]):
+	if len(args) != 1:
+		# wrong usage
+		show_help(['list'])
+		return
+
+	if args[0] == 'ip':
+		for instance_name, floating_ip in get_floating_ip_map():
+			print "%-16s%s" % (instance_name, floating_ip)
+	elif args[0] == 'server':
+		give_command("openstack server list")
+		print poll_output(-1)
+	else:
+		print "Illegal argument: %s" % args[0]
 
 def usrcmd_deploy_vm(args=[]):
 	if len(args) != 1:
@@ -365,15 +389,62 @@ def delete_server_instance(instance_name, key_name, vm_name=None):
 			if dpl_cfg['INSTANCE_NAME'] == instance_name and dpl_cfg['KEY_NAME'] == key_name:
 				vm_name = vm
 
-	print "Removing server instance..."
+	# get floating ip address, if any
+	floating_ip = None
+	for server_name, ip in get_floating_ip_map():
+		if server_name == instance_name:
+			floating_ip = ip
+			break
+
+	# delete server instance itself
+	print "Removing server instance: %s" % instance_name
 	give_command("openstack server delete %s" % instance_name)
 	print poll_all_outputs()
-	print "Removing associated keypair..."
+	if get_returncode() == 0:
+		utils.print_pass("SUCCESS")
+
+	# delete associated keypair
+	print "Removing associated keypair: %s" % key_name
 	give_command("openstack keypair delete %s" % key_name)
 	print poll_all_outputs()
+	if get_returncode() == 0:
+		utils.print_pass("SUCCESS")
+
+	if floating_ip != None:
+		# dissociate the known host
+		print "Dissociate the known host..."
+		give_command('sudo ssh-keygen -f "/root/.ssh/known_hosts" -R %s' % floating_ip)
+		print poll_output(-1)
+
+		# delete associated floating ip
+		print "Removing floating ip: %s" % floating_ip
+		give_command("openstack floating ip delete %s" % floating_ip)
+		print poll_all_outputs()
+		if get_returncode() == 0:
+			utils.print_pass("SUCCESS")
 
 	if vm_name != None:
 		configs.sla_configs.pop(vm_name)
+
+# returns an array of tuple (server_instance, floating_ip)
+def get_floating_ip_map():
+	give_command("openstack floating ip list")
+	output = poll_output(-1)
+	table_floating_ips = utils.parse_openstack_table(output)
+	
+	give_command("openstack server list")
+	output = poll_output(-1)
+	table_servers = utils.parse_openstack_table(output)
+
+	ip_list = [(entry['Floating IP Address'], entry['Fixed IP Address']) for entry in table_floating_ips]
+	ret = {}
+	for entry in table_servers:
+		name = entry['Name']
+		networks = entry['Networks']
+		for floating_ip, fixed_ip in ip_list:
+			if floating_ip in networks and fixed_ip in networks:
+				ret[name] = floating_ip
+	return ret
 
 def get_cmd_func(cmd):
 	if type(cmd) != str or cmd not in commands:
