@@ -31,7 +31,8 @@ home_dir = ""
 commands = {
 	"help" : {
 		"description" : "Show help message",
-		"usage" : "help [command]\n* If a command is specified, show help message of that command.",
+		"usage" : "help [command]\n" + \
+				"* HINT: If a command is specified, show help message of that command.",
 		"func_name" : "show_help"
 	},
 	"exit" : {
@@ -54,14 +55,14 @@ commands = {
 	},
 	"delete" : {
 		"description" : "Delete created VM instance",
-		"usage" : ("%s\n\t%s\n%s\n\t%s\n%s\n\t%s\n* %s\n") % ("delete --vm vm_name",
-								"Delete VM of given VM name. Must be in current configuration.",
-							"delete --instance instance_name [--key key_name]",
-								("%s %s") % ("Delete server instance by explicitly giving instance and key name.",
-									"If key name isn't given, use default key name."),
-							"delete --all",
-								"Delete all VMs in current configuration",
-							"You can check current configuration by using 'conf' command"),
+		"usage" : "delete --vm vm_name\n" + \
+				"\tDelete VM of given VM name. Must be in current configuration.\n" + \
+				"delete --instance instance_name [--key key_name]\n" + \
+				"\tDelete server instance by explicitly giving instance and key name." + \
+				"If key name isn't given, use default key name.\n" + \
+				"delete --all\n" + \
+				"\tDelete all VMs in current configuration\n" + \
+				"* HINT: You can check current configuration by using 'conf' command\n",
 		"func_name" : "usrcmd_delete_vm"
 	}
 }
