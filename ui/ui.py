@@ -284,8 +284,12 @@ def list_things(args=[]):
 		return
 
 	if args[0] == 'ip':
-		for instance_name, floating_ip in get_floating_ip_map():
-			print "%-16s%s" % (instance_name, floating_ip)
+		ip_map = get_floating_ip_map()
+		if ip_map != None:
+			for instance_name, floating_ip in ip_map:
+				print "%-16s%s" % (instance_name, floating_ip)
+		else:
+			print ""
 	elif args[0] == 'server':
 		give_command("openstack server list")
 		print poll_output(-1)
@@ -391,10 +395,12 @@ def delete_server_instance(instance_name, key_name, vm_name=None):
 
 	# get floating ip address, if any
 	floating_ip = None
-	for server_name, ip in get_floating_ip_map():
-		if server_name == instance_name:
-			floating_ip = ip
-			break
+	ip_map = get_floating_ip_map()
+	if ip_map != None:
+		for server_name, ip in ip_map:
+			if server_name == instance_name:
+				floating_ip = ip
+				break
 
 	# delete server instance itself
 	print "Removing server instance: %s" % instance_name
