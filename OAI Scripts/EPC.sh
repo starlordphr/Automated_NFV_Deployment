@@ -80,5 +80,22 @@ echo "----- Provision: Installing third party SW for EPC..."
 source oaienv
 cd ../
 sudo apt install -y expect
-#./MME_expect.exp
-#./openair-cn/scripts/build_hss
+
+./HSS_expect.exp
+./MME_expect.exp
+./SPGW_expect.exp
+
+./openair-cn/scripts/build_hss
+./openair-cn/scripts/build_mme
+./openair-cn/scripts/build_spgw
+
+# install configuration in OAI default directory
+sudo mkdir -p /usr/local/etc/oai
+sudo cp Automated\ NFV\ Development/ui/OAI\ config/hss.conf /usr/local/etc/oai
+sudo cp Automated\ NFV\ Development/ui/OAI\ config/mme.conf /usr/local/etc/oai
+sudo cp Automated\ NFV\ Development/ui/OAI\ config/spgw.conf /usr/local/etc/oai
+cd openair-cn; source oaienv; cd scripts
+./check_hss_s6a_certificate /usr/local/etc/oai/freeDiameter hss.OpenAir5G.Alliance
+./check_mme_s6a_certificate /usr/local/etc/oai/freeDiameter mme.OpenAir5G.Alliance
+./hss_db_import 127.0.0.1 root password oai_db ~/opencells-mods/opencells_db.sql
+
