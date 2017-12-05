@@ -437,13 +437,13 @@ def get_floating_ip_map():
 	table_servers = utils.parse_openstack_table(output)
 
 	ip_list = [(entry['Floating IP Address'], entry['Fixed IP Address']) for entry in table_floating_ips]
-	ret = {}
+	ret = []
 	for entry in table_servers:
 		name = entry['Name']
 		networks = entry['Networks']
 		for floating_ip, fixed_ip in ip_list:
 			if floating_ip in networks and fixed_ip in networks:
-				ret[name] = floating_ip
+				ret.append((name, floating_ip))
 	return ret
 
 def get_cmd_func(cmd):
