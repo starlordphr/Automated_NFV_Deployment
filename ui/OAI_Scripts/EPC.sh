@@ -22,7 +22,7 @@ git config --global user.name "starlordphr"
 git config --global user.email "prashanthrajput@ucla.edu"
 
 #Install expect
-sudo apt-get -y install expect
+#sudo apt-get -y install expect
 
 # Add the OAI repository as authorized remote system
 #echo "----- Provision: Adding the OAI repository as authorized remote system..."
@@ -45,8 +45,28 @@ cd ../../..
 wget https://open-cells.com/d5138782a8739209ec5760865b1e53b0/opencells-mods-20170823.tgz
 tar xf opencells-mods-20170823.tgz
 
+# Download & Compile the eNB on 17.04
+echo "----- Provision: Downloading & Compiling eNB..."
+git clone https://gitlab.eurecom.fr/oai/openairinterface5g.git
+cd openairinterface5g
+git checkout develop
+
+# Apply downloaded Patch
+echo "----- Provision: Patching eNB..."
+# IMPORTANT: This patch fails and all the further setups fail as they are interactive
+# Unlike apt I cannot pass -y as a flag to hss, mme and spgw
+# TODO: Find a solution to this
+cd ..
+cp opencells-mods/cmake_targets/tools/build_helper openairinterface5g/cmake_targets/tools/build_helper
+cd openairinterface5g
+git checkout develop
+
+source oaienv
+./cmake_targets/build_oai -I       # install SW packages from internet
+
 # Clone OAI EPC
 echo "----- Provision: Cloning OAI EPC..."
+cd ..
 git clone https://gitlab.eurecom.fr/oai/openair-cn.git
 cd openair-cn
 git checkout develop
@@ -58,7 +78,24 @@ git apply ../opencells-mods/EPC.patch
 # Install third party SW for EPC
 echo "----- Provision: Installing third party SW for EPC..."
 source oaienv
-cd scripts
-./../../HSS_expect  #Semi-Automatic
+cd ../
+sudo apt install -y expect
 
-./build_hss
+./HSS_expect.exp
+./MME_expect.exp
+./SPGW_expect.exp
+
+./openair-cn/scripts/build_hss
+./openair-cn/scripts/build_mme
+./openair-cn/scripts/build_spgw
+
+# install configuration in OAI default directory
+sudo mkdir -p /usr/local/etc/oai
+sudo cp Automated\ NFV\ Development/ui/OAI\ config/hss.conf /usr/local/etc/oai
+sudo cp Automated\ NFV\ Development/ui/OAI\ config/mme.conf /usr/local/etc/oai
+sudo cp Automated\ NFV\ Development/ui/OAI\ config/spgw.conf /usr/local/etc/oai
+cd openair-cn; source oaienv; cd scripts
+./check_hss_s6a_certificate /usr/local/etc/oai/freeDiameter hss.OpenAir5G.Alliance
+./check_mme_s6a_certificate /usr/local/etc/oai/freeDiameter mme.OpenAir5G.Alliance
+./hss_db_import 127.0.0.1 root password oai_db ~/opencells-mods/opencells_db.sql
+
