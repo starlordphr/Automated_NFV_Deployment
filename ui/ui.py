@@ -43,7 +43,7 @@ commands = {
 		"func_name" : "show_config"
 	},
 	"exec" : {
-		"description" : "Send a command to subshell and execute it",
+		"description" : "Send a command to child bash and execute it",
 		"usage" : "exec command",
 		"func_name" : "send_cmd_and_exec"
 	}
@@ -229,14 +229,14 @@ def show_help(args=[]):
 def exit_console(args=[]):
 	global console_running
 	console_running = False
+	give_command("exit")
+	time.sleep(0.25)
 	# waitpid?
 
 def show_config(args=[]):
 	print utils.format_dict(configs.sla_configs)
 
 def send_cmd_and_exec(args=[]):
-	print args
-
 	if len(args) == 0:
 		show_help(['exec'])
 		return
@@ -244,7 +244,7 @@ def send_cmd_and_exec(args=[]):
 	if type(args) == list:
 		args = ' '.join(args)
 	if type(args) == str:
-		print "Giving command: %s" % args
+		print "Sending command to child bash: %s" % args
 		give_command(args)
 		# responsive_poll()
 		print poll_output()
