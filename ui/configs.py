@@ -34,7 +34,8 @@ OAI_CONFIGS = {
 	},
 	'hss' : {},
 	'mme' : {},
-	'spgw' : {}
+	'spgw' : {},
+	'epc' : {}
 }
 
 # returns list of new vms put into config dict
