@@ -60,5 +60,5 @@ git checkout develop
 
 source oaienv
 ./cmake_targets/build_oai -I       # install SW packages from internet
-./cmake_targets/build_oai  -w USRP --eNB # compile eNB
+./cmake_targets/build_oai  -w USRP --eNB --cflags_processor "-mssse3 -msse4.1" # compile eNB
 #./cmake_targets/build_oai  -w USRP --eNB # compile eNB
