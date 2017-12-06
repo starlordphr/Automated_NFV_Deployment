@@ -292,14 +292,15 @@ def list_things(args=[]):
 				output = poll_output(-1)
 				table = utils.parse_openstack_table(output)
 				key_name = None
-				for entry in table:
-					if entry['Field'] == 'key_name':
-						key_name = entry['Value']
-						break
+				if table != None:
+					for entry in table:
+						if entry['Field'] == 'key_name':
+							key_name = entry['Value']
+							break
 
 				ssh_command = ""
 				if key_name != None:
-					ssh_command = "sudo ssh -i /opt/stack/keys/%s ubuntu@%s" % (key_name, floating_ip)
+					ssh_command = "sudo ssh -i %s/%s ubuntu@%s" % (keystore_dir, key_name, floating_ip)
 				print "%-16s%-16sssh command: %s" % (instance_name, floating_ip, ssh_command)
 		else:
 			print ""
@@ -521,39 +522,45 @@ def configure_deployment(vm_name, vm_type, deploy_config):
 
 def configure_oai(vm_name, vm_type, oai_configs):
 	global command_to_run
-	source_file_path = '%s/OAI_Scripts/' % work_dir
-	destination_file_path = '/home/ubuntu/'
+	source_file_path = []
+	destination_file_path = []
+	base_path_src = '%s/OAI_Scripts/' % work_dir
+	base_path_dst = '/home/ubuntu/'
 
 	for oai_opt in oai_configs:
 		# oai_opt = eNodeB, ue, eNodeB_ue, hss, mme, spgw
 		# oai_configs[oai_opt] = {}	--> dict for possible params in the future
 		if oai_opt == "eNodeB":
-			source_file_path += 'eNodeB.sh'
-			destination_file_path += 'eNodeB.sh'
+			for fname in ['eNodeB.sh', 'eNodeB.conf']:
+				source_file_path.append(base_path_src + fname)
+				destination_file_path.append(base_path_dst + fname)
+		elif oai_opt == "ue":
+			for fname in ['UE.sh', 'UE.conf']:
+				source_file_path.append(base_path_src + fname)
+				destination_file_path.append(base_path_dst + fname)
+		elif oai_opt == "eNodeB_ue":
+			for fname in ['UE_eNodeB.sh', 'UE_eNodeB.conf']:
+				source_file_path.append(base_path_src + fname)
+				destination_file_path.append(base_path_dst + fname)
+		elif oai_opt == "hss":
+			for fname in ['HSS.sh', 'HSS.conf']:
+				source_file_path.append(base_path_src + fname)
+				destination_file_path.append(base_path_dst + fname)
+		elif oai_opt == "mme":
+			for fname in ['MME.sh', 'MME.conf']:
+				source_file_path.append(base_path_src + fname)
+				destination_file_path.append(base_path_dst + fname)
+		elif oai_opt == "spgw":
+			for fname in ['SPGW.sh', 'SPGW.conf']:
+				source_file_path.append(base_path_src + fname)
+				destination_file_path.append(base_path_dst + fname)
+		elif oai_opt == "epc":
+			for fname in ['EPC.sh', 'EPC.conf', '*_expect.exp']:
+				source_file_path.append(base_path_src + fname)
+				destination_file_path.append(base_path_dst) # + fname)
 
-		if oai_opt == "ue":
-			source_file_path += 'UE.sh'
-			destination_file_path += 'UE.sh'
-
-		if oai_opt == "eNodeB_ue":
-			source_file_path += 'UE_eNodeB.sh'
-			destination_file_path += 'UE_eNodeB.sh'
-
-		if oai_opt == "hss":
-			source_file_path += 'HSS.sh'
-			destination_file_path += 'HSS.sh'
-
-		if oai_opt == "mme":
-			source_file_path += 'MME.sh'
-			destination_file_path += 'MME.sh'
-
-		if oai_opt == "spgw":
-			source_file_path += 'SPGW.sh'
-			destination_file_path += 'SPGW.sh'
-
-
-		# scp_command(source_file_path, destination_file_path)
-		# time.sleep(0.25)
+		scp_command(source_file_path, destination_file_path)
+		time.sleep(0.5)
 
 		'''
 		command_to_run = 'pidof apt-get | xargs kill -9'
@@ -576,10 +583,14 @@ def ssh_command(command_to_run):
 	print poll_all_outputs()
 
 def scp_command(source_file_path, destination_file_path):
-	scp_command = 'sudo scp -oStrictHostKeyChecking=no -i %s/%s %s ubuntu@%s:%s' % (keystore_dir, keyName, source_file_path, ip, destination_file_path)
-	print scp_command
-	give_command(scp_command)
-	print poll_all_outputs()
+	if type(source_file_path) == str and type(destination_file_path) == str:
+		scp_command = 'sudo scp -oStrictHostKeyChecking=no -i %s/%s %s ubuntu@%s:%s' % (keystore_dir, keyName, source_file_path, ip, destination_file_path)
+		print scp_command
+		give_command(scp_command)
+		print poll_all_outputs()
+	elif type(source_file_path) == list and type(destination_file_path) == list and len(source_file_path) == len(destination_file_path):
+		for src, dst in [(source_file_path[i], destination_file_path[i]) for i in xrange(len(source_file_path))]:
+			scp_command(src, dst)
 
 def create_server(vm_name, deploy_config):
 	global keystore_dir, keyName, ip
