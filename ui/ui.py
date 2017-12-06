@@ -51,7 +51,7 @@ commands = {
 	"list" : {
 		"description" : "A few things you can list...",
 		"usage" : "list option\noptions:\n" + \
-				"\t%-8s%s" % ("ip", "shows a list of instance names mapped to floating ip") + \
+				"\t%-8s%s" % ("ip", "shows a list of instance names mapped to floating ip\n") + \
 				"\t%-8s%s" % ("server", "shows list of servers"),
 		"func_name" : "list_things"
 	},
@@ -69,7 +69,7 @@ commands = {
 				"If key name isn't given, use default key name.\n" + \
 				"delete --all\n" + \
 				"\tDelete all VMs in current configuration\n" + \
-				"* HINT: You can check current configuration by using 'conf' command\n",
+				"* HINT: You can check current configuration by using 'conf' command",
 		"func_name" : "usrcmd_delete_vm"
 	}
 }
@@ -284,13 +284,27 @@ def list_things(args=[]):
 		return
 
 	if args[0] == 'ip':
+		# list ip
 		ip_map = get_floating_ip_map()
 		if ip_map != None:
 			for instance_name, floating_ip in ip_map:
-				print "%-16s%s" % (instance_name, floating_ip)
+				give_command("openstack server show %s" % instance_name)
+				output = poll_output(-1)
+				table = utils.parse_openstack_table(output)
+				key_name = None
+				for entry in table:
+					if entry['Field'] == 'key_name':
+						key_name = entry['Value']
+						break
+
+				ssh_command = ""
+				if key_name != None:
+					ssh_command = "sudo ssh -i /opt/stack/keys/%s ubuntu@%s" % (key_name, floating_ip)
+				print "%-16s%-16sssh command: %s" % (instance_name, floating_ip, ssh_command)
 		else:
 			print ""
 	elif args[0] == 'server':
+		# list server
 		give_command("openstack server list")
 		print poll_output(-1)
 	else:
