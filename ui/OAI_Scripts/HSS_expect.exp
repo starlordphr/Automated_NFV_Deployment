@@ -45,7 +45,6 @@ if {$force_conservative} {
 set timeout -1
 spawn ./openair-cn/scripts/build_hss -i
 match_max 100000
-send -- "y\r"
 expect -exact "Do you want to continue? \[Y/n\] "
 sleep 3
 send -- "y\r"
