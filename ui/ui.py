@@ -454,6 +454,7 @@ def delete_server_instance(instance_name, key_name, vm_name=None):
 
 # returns an array of tuple (server_instance, floating_ip)
 def get_floating_ip_map():
+	clear_historical_outputs()
 	give_command("openstack floating ip list")
 	output = poll_output(-1)
 	table_floating_ips = utils.parse_openstack_table(output)
@@ -462,15 +463,19 @@ def get_floating_ip_map():
 	output = poll_output(-1)
 	table_servers = utils.parse_openstack_table(output)
 
-	ip_list = [(entry['Floating IP Address'], entry['Fixed IP Address']) for entry in table_floating_ips]
-	ret = []
-	for entry in table_servers:
-		name = entry['Name']
-		networks = entry['Networks']
-		for floating_ip, fixed_ip in ip_list:
-			if floating_ip in networks and fixed_ip in networks:
-				ret.append((name, floating_ip))
-	return ret
+	if table_floating_ips != None and table_servers != None:
+		ip_list = [(entry['Floating IP Address'], entry['Fixed IP Address']) for entry in table_floating_ips]
+		ret = []
+		for entry in table_servers:
+			name = entry['Name']
+			networks = entry['Networks']
+			for floating_ip, fixed_ip in ip_list:
+				if floating_ip in networks and fixed_ip in networks:
+					ret.append((name, floating_ip))
+		return ret
+	else:
+		utils.print_error("Failed to read server list or floating ip list.")
+		return None
 
 def get_cmd_func(cmd):
 	if type(cmd) != str or cmd not in commands:
