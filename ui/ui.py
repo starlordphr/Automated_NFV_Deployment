@@ -300,8 +300,8 @@ def list_things(args=[]):
 
 				ssh_cmd = ""
 				if key_name != None:
-					ssh_cmd = "sudo ssh -i /opt/stack/keys/%s ubuntu@%s" % (key_name, floating_ip)
-					scp_cmd = "sudo scp -i /opt/stack/keys/%s src_file ubuntu@%s:dst_file" % (key_name, floating_ip)
+					ssh_cmd = "sudo ssh -oStrictHostKeyChecking=no -i /opt/stack/keys/%s ubuntu@%s" % (key_name, floating_ip)
+					scp_cmd = "sudo scp -oStrictHostKeyChecking=no -i /opt/stack/keys/%s src_file ubuntu@%s:dst_file" % (key_name, floating_ip)
 				# print "%-16s%-16sssh command:   %s" % (instance_name, floating_ip, ssh_cmd)
 				print "%-16s%-16s\n\tssh command:   %s\n\tscp command:   %s" % (instance_name, floating_ip, ssh_cmd, scp_cmd)
 		else:
@@ -457,7 +457,7 @@ def get_floating_ip_map():
 	give_command("openstack floating ip list")
 	output = poll_output(-1)
 	table_floating_ips = utils.parse_openstack_table(output)
-	
+
 	give_command("openstack server list")
 	output = poll_output(-1)
 	table_servers = utils.parse_openstack_table(output)
@@ -507,7 +507,7 @@ Swap:         16336         511       15825
 			for line in lines[1:]:
 				line = line.split()
 				table[line[0]] = line[1:]
-			
+
 			# getting ram
 			free_ram = int(table['Mem:'][titles.index('free')])
 			return free_ram
@@ -694,7 +694,7 @@ def create_server(vm_name, deploy_config):
 		give_command('openstack subnet set --dns-nameserver 8.8.8.8 %s' % subnet_name)
 		time.sleep(0.25)
 		print poll_all_outputs()
-		
+
 	else:
 		# Step 4
 		print "Using default security group and private-subnet"
