@@ -298,12 +298,12 @@ def list_things(args=[]):
 							key_name = entry['Value']
 							break
 
-				ssh_command = ""
+				ssh_cmd = ""
 				if key_name != None:
-					ssh_command = "sudo ssh -i /opt/stack/keys/%s ubuntu@%s" % (key_name, floating_ip)
-					scp_command = "sudo scp -i /opt/stack/keys/%s src_file ubuntu@%s:dst_file" % (key_name, floating_ip)
-				# print "%-16s%-16sssh command:   %s" % (instance_name, floating_ip, ssh_command)
-				print "%-16s%-16s\n\tssh command:   %s\n\tscp command:   %s" % (instance_name, floating_ip, ssh_command, scp_command)
+					ssh_cmd = "sudo ssh -i /opt/stack/keys/%s ubuntu@%s" % (key_name, floating_ip)
+					scp_cmd = "sudo scp -i /opt/stack/keys/%s src_file ubuntu@%s:dst_file" % (key_name, floating_ip)
+				# print "%-16s%-16sssh command:   %s" % (instance_name, floating_ip, ssh_cmd)
+				print "%-16s%-16s\n\tssh command:   %s\n\tscp command:   %s" % (instance_name, floating_ip, ssh_cmd, scp_cmd)
 		else:
 			print ""
 	elif args[0] == 'server':
@@ -332,7 +332,10 @@ def usrcmd_delete_vm(args=[]):
 	args = parser.parse_args(args)
 
 	if args.all:
-		for vm in configs.sla_configs:
+		if len(configs.sla_configs) == 0:
+			utils.print_warning("Empty configuration! Nothing to delete!")
+		vms = list(configs.sla_configs.keys())
+		for vm in vms:
 			delete_vm(vm)
 	elif args.vm != None:
 		delete_vm(args.vm)
@@ -579,16 +582,16 @@ def ssh_command(command_to_run):
 	# sudo ssh-keygen -f "/root/.ssh/known_hosts" -R 172.24.4.6
 	# sudo rm "/opt/stack/.ssh/known_hosts"
 
-	ssh_command = 'sudo ssh -T -oStrictHostKeyChecking=no -i %s/%s ubuntu@%s \'%s\'' % (keystore_dir, keyName, ip, command_to_run)
-	print ssh_command
-	give_command(ssh_command)
+	ssh_cmd = 'sudo ssh -T -oStrictHostKeyChecking=no -i %s/%s ubuntu@%s \'%s\'' % (keystore_dir, keyName, ip, command_to_run)
+	print ssh_cmd
+	give_command(ssh_cmd)
 	print poll_all_outputs()
 
 def scp_command(source_file_path, destination_file_path):
 	if type(source_file_path) == str and type(destination_file_path) == str:
-		scp_command = 'sudo scp -oStrictHostKeyChecking=no -i %s/%s %s ubuntu@%s:%s' % (keystore_dir, keyName, source_file_path, ip, destination_file_path)
-		print scp_command
-		give_command(scp_command)
+		scp_cmd = 'sudo scp -oStrictHostKeyChecking=no -i %s/%s %s ubuntu@%s:%s' % (keystore_dir, keyName, source_file_path, ip, destination_file_path)
+		print scp_cmd
+		give_command(scp_cmd)
 		print poll_all_outputs()
 	elif type(source_file_path) == list and type(destination_file_path) == list and len(source_file_path) == len(destination_file_path):
 		for src, dst in [(source_file_path[i], destination_file_path[i]) for i in xrange(len(source_file_path))]:
