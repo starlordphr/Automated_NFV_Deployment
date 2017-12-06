@@ -300,8 +300,10 @@ def list_things(args=[]):
 
 				ssh_command = ""
 				if key_name != None:
-					ssh_command = "sudo ssh -i %s/%s ubuntu@%s" % (keystore_dir, key_name, floating_ip)
-				print "%-16s%-16sssh command: %s" % (instance_name, floating_ip, ssh_command)
+					ssh_command = "sudo ssh -i /opt/stack/keys/%s ubuntu@%s" % (key_name, floating_ip)
+					scp_command = "sudo scp -i /opt/stack/keys/%s src_file ubuntu@%s:dst_file" % (key_name, floating_ip)
+				# print "%-16s%-16sssh command:   %s" % (instance_name, floating_ip, ssh_command)
+				print "%-16s%-16s\n\tssh command:   %s\n\tscp command:   %s" % (instance_name, floating_ip, ssh_command, scp_command)
 		else:
 			print ""
 	elif args[0] == 'server':
