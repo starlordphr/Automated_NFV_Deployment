@@ -46,8 +46,10 @@ set timeout -1
 spawn ./openair-cn/scripts/build_hss -i
 match_max 100000
 expect -exact "Do you want to continue? \[Y/n\] "
+sleep 3
 send -- "y\r"
 expect -exact "New password for the MySQL \"root\" user:"
+sleep 3
 send -- "p"
 expect -exact "*"
 send -- "a"
@@ -58,6 +60,7 @@ send -- "s"
 expect -exact "*"
 send -- "\r"
 expect -exact "Repeat password for the MySQL \"root\" user:"
+sleep 3
 send -- "p"
 expect -exact "*"
 send -- "a"
@@ -68,10 +71,13 @@ send -- "s"
 expect -exact "*"
 send -- "\r"
 expect -exact "Do you want to install freeDiameter 1.2.0 ? <y/N> "
+sleep 3
 send -- "y\r"
 expect -exact "Do you want to continue? \[Y/n\] "
+sleep 3
 send -- "y\r"
 expect -exact "Do you want to continue? \[Y/n\] "
+sleep 3
 send -- "y\r"
 expect -exact "<Ok>"
 sleep 3
@@ -91,6 +97,7 @@ send -- "s"
 expect -exact "*"
 send -- "\r"
 expect -exact "<Cancel>"
+sleep 3
 send -- "p"
 expect -exact "*"
 send -- "a"
