@@ -147,7 +147,7 @@ def main():
 
 	# check if openstack is up at all
 	give_command('openstack flavor list') # should have some default flavors present
-	output = poll_output(timeout=15000)
+	output = poll_output(-1)
 	flavor_table = None
 	if len(output) == 0:
 		raise RuntimeError("Openstack timed out!")
@@ -161,9 +161,13 @@ def main():
 	# create enb flavor if not present
 	flavor_list = [entry['ID'] for entry in flavor_table]
 	if 'enb' not in flavor_list:
+		give_command('source openrc admin')
+		print poll_output()
 		print "Creating openstack flavor for eNodeB nodes..."
 		give_command('openstack flavor create --public enb_flavor --id enb --ram 4096 --disk 40 --vcpus 4')
 		print poll_output(-1)
+		give_command('source openrc')
+		print poll_output()
 
 	# process according to SLA specification
 	print "Processing SLA configuration..."
@@ -256,7 +260,9 @@ def clear_historical_outputs():
 def show_help(args=[]):
 	if len(args) == 0:
 		# list all commands available
-		for opt in commands:
+		cmd_list = list(commands.keys())
+		cmd_list.sort(key=lambda item: (len(item), item))  # sort by length, then alphabetical order
+		for opt in cmd_list:
 			print "%-16s%s" % (opt, commands[opt]['description'])
 		print "Use 'help command_name' to check usage of each command."
 	else:
@@ -808,9 +814,9 @@ def create_server(vm_name, deploy_config):
 			ip = [entry['Value'] for entry in table if entry['Field'] == 'floating_ip_address'][0]
 			give_command('openstack server add floating ip %s %s' % (deploy_config['INSTANCE_NAME'], ip))
 			#print poll_output()
-			utils.print_pass("An upbound of 3-minute wait...")
+			utils.print_pass("An upbound of 5-minute wait...")
 			# time.sleep(120)
-			timebound = 180
+			timebound = 300
 			start_time = time.time()
 			while True:
 				# time bound
@@ -822,20 +828,33 @@ def create_server(vm_name, deploy_config):
 				# ping
 				give_command('ping -w 15 -c 4 %s' % ip)
 				output = poll_output(-1)
-				print "ping output:\n%s\n" % output
+				lines = output.split('\n')
+				if len(lines) > 0:
+					# print the first line of ping output (not the title)
+					print lines[min(1, len(lines) - 1)]
 				rc = get_returncode()
-				utils.print_highlight("Return code: %s" % rc)
+				# utils.print_highlight("Return code: %s" % rc)
+				if rc == 0:
+					break
+				elif type(rc) == int and rc != 0:
+					pass
 				if type(rc) == str:
 					# further ping message...
 					print rc
 					output = poll_all_outputs()
 					print output
 					rc = get_returncode()
-					utils.print_highlight("Return code: %s" % rc)
+					# utils.print_highlight("Return code: %s" % rc)
 					if rc == 0:
 						break
 
 				time.sleep(1)
+
+			# to prevent unsuccessful scp
+			for i in xrange(3):
+				# for responsiveness sake
+				print "Waiting for connection..."
+				time.sleep(10)
 
 
 ##########################
