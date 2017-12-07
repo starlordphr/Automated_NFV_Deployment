@@ -55,6 +55,10 @@ commands = {
 				"\t%-8s%s" % ("server", "shows list of servers"),
 		"func_name" : "list_things"
 	},
+	"demo" : {
+		"description" : "Demonostrate how utils.parse_openstack_table() parse a table to a json object (for future developers)",
+		"func_name" : "demo_parse_table"
+	},
 	"deploy" : {
 		"description" : "Deploy (more) VMs by given SLA file",
 		"usage" : "deploy sla_file_name",
@@ -90,7 +94,7 @@ def main():
 
 	# process args to intialize configs module
 	# will raise exception if input is ill-formatted
-	if (args.sla != None):
+	if args.sla != None:
 		configs.parse_sla_config(args.sla)
 
 	# fork child bash
@@ -127,29 +131,39 @@ def main():
 	init()
 
 	# check available RAM and warn user if RAM is not enough
-	free_ram = get_available_ram()
-	if free_ram < 0:
-		utils.print_warning("[WARNING] An error occurred when checking RAM. Please check available RAM by yourself.")
-	elif free_ram < 4096:
-		utils.print_error("WARNING!!! Less than 4GB of RAM available!")
-		# too long (lol)
-		print "%s %s %s" % ("It is recommended to have at least 4GB of free RAM for VM deployment.",
-			"Insufficient RAM may result in deployment error.",
-			"Do you wish to continue (y/n)?"),
-		s = raw_input()
-		if s[0].lower() == 'n':
-			raise SystemExit("Aborted.")
+	if args.sla != None:
+		free_ram = get_available_ram()
+		if free_ram < 0:
+			utils.print_warning("[WARNING] An error occurred when checking RAM. Please check available RAM by yourself.")
+		elif free_ram < 4096:
+			utils.print_error("WARNING!!! Less than 4GB of RAM available!")
+			# too long (lol)
+			print "%s %s %s" % ("It is recommended to have at least 4GB of free RAM for VM deployment.",
+				"Insufficient RAM may result in deployment error.",
+				"Do you wish to continue (y/n)?"),
+			s = raw_input()
+			if s[0].lower() == 'n':
+				raise SystemExit("Aborted.")
 
 	# check if openstack is up at all
-	give_command('openstack image list') # should have cirros by default
+	give_command('openstack flavor list') # should have some default flavors present
 	output = poll_output(timeout=15000)
+	flavor_table = None
 	if len(output) == 0:
 		raise RuntimeError("Openstack timed out!")
 	else:
 		rc = get_returncode()
-		if rc != 0:
+		flavor_table = utils.parse_openstack_table(output)
+		if rc != 0 or flavor_table == None:
 			utils.print_error(output)
 			raise RuntimeError("Openstack is not up! Please make sure you have executed 'stack.sh' as stack user!")
+
+	# create enb flavor if not present
+	flavor_list = [entry['ID'] for entry in flavor_table]
+	if 'enb' not in flavor_list:
+		print "Creating openstack flavor for eNodeB nodes..."
+		give_command('openstack flavor create --public enb_flavor --id enb --ram 4096 --disk 40 --vcpus 4')
+		print poll_output(-1)
 
 	# process according to SLA specification
 	print "Processing SLA configuration..."
@@ -162,11 +176,14 @@ def main():
 		user_args = raw_input().split()
 
 		if len(user_args) > 0:
-			cmd = user_args[0]
-			cmd_args = user_args[1:] if len(user_args) > 1 else []
-			func = get_cmd_func(cmd)
-			if func != None:
-				func(cmd_args)
+			try:
+				cmd = user_args[0]
+				cmd_args = user_args[1:] if len(user_args) > 1 else []
+				func = get_cmd_func(cmd)
+				if func != None:
+					func(cmd_args)
+			except Exception as valerr:
+				utils.print_error("Encountered error in command execution!! Error message:\n%s" % valerr)
 
 ##############################
 ## child bash communication ##
