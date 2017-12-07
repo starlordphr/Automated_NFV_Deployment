@@ -773,7 +773,7 @@ def create_server(vm_name, deploy_config):
 
 	if creating_server:
 		#Creating floating ip
-		utils.print_pass("An upbound of 20-second wait...")
+		utils.print_pass("Upperbound wait of 20 seconds...")
 		timebound = 20
 		#time.sleep(20) # added to give time for the spawning to complete
 		should_proceed = True
@@ -814,7 +814,8 @@ def create_server(vm_name, deploy_config):
 			ip = [entry['Value'] for entry in table if entry['Field'] == 'floating_ip_address'][0]
 			give_command('openstack server add floating ip %s %s' % (deploy_config['INSTANCE_NAME'], ip))
 			#print poll_output()
-			utils.print_pass("An upbound of 5-minute wait...")
+			time.sleep(5)
+			utils.print_pass("Upperbound wait of 5 minutes...")
 			# time.sleep(120)
 			timebound = 300
 			start_time = time.time()
