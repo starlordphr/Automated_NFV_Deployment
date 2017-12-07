@@ -729,7 +729,9 @@ def create_server(vm_name, deploy_config):
 	# check if server exists already
 	give_command('openstack server show %s' % deploy_config['INSTANCE_NAME'])
 	output = poll_output(-1)
+	creating_server = False
 	if output == "No server with a name or ID of '%s' exists." % deploy_config['INSTANCE_NAME']:
+		creating_server = True
 		print output
 		cmd = 'openstack server create --flavor %s --image %s --nic net-id=%s --security-group %s --key-name %s %s' % (deploy_config['FLAVOR_NAME'],
 			deploy_config['IMAGE_NAME'], net_id, deploy_config['SECURITY_GROUP_NAME'],
@@ -745,21 +747,70 @@ def create_server(vm_name, deploy_config):
 		# server exists: don't re-create
 		print "Using exisiting server %s" % deploy_config['INSTANCE_NAME']
 
-	#Creating floating ip
-	utils.print_pass("20-second wait...")
-	time.sleep(20) # added to give time for the spawning to complete
+	if creating_server:
+		#Creating floating ip
+		utils.print_pass("An upbound of 20-second wait...")
+		timebound = 20
+		#time.sleep(20) # added to give time for the spawning to complete
+		should_proceed = True
+		start_time = time.time()
+		while True:
+			# time bound
+			time_elapsed = time.time() - start_time
+			if time_elapsed >= timebound:
+				utils.print_warning("Giving up on waiting for instance '%s' to become active..." % deploy_config['INSTANCE_NAME'])
+				break
 
-	give_command('openstack floating ip create %s' % deploy_config['PUBLIC_NETWORK_NAME'])
-	output = poll_output(-1)
-	print output
-	utils.print_pass("30-second wait...")
-	time.sleep(30) # TODO: check in a while loop to see if floating ip is up
-	table = utils.parse_openstack_table(output)
-	ip = [entry['Value'] for entry in table if entry['Field'] == 'floating_ip_address'][0]
-	give_command('openstack server add floating ip %s %s' % (deploy_config['INSTANCE_NAME'], ip))
-	#print poll_output()
-	utils.print_pass("2-minute wait...")
-	time.sleep(120) # TODO: check in a while loop to see if floating ip is added
+			# check server status
+			print "Checking status for server '%s'..." % deploy_config['INSTANCE_NAME']
+			give_command('openstack server show %s' % deploy_config['INSTANCE_NAME'])
+			output = poll_output(-1)
+			table = utils.parse_openstack_table(output)
+			if table != None:
+				row = [entry for entry in table if entry['Field'] == 'status'][0]
+				print "Status: %s" % row['Value']
+				if row['Value'] == 'ACTIVE':
+					utils.print_pass("Server '%s' successfully created!" % deploy_config['INSTANCE_NAME'])
+					break
+				elif row['Value'] == 'ERROR':
+					should_proceed = False
+					utils.print_error("Server '%s' is in ERROR state!" % deploy_config['INSTANCE_NAME'])
+					break
+
+			time.sleep(1)
+
+		if should_proceed:
+			give_command('openstack floating ip create %s' % deploy_config['PUBLIC_NETWORK_NAME'])
+			output = poll_output(-1)
+			print output
+			#utils.print_pass("30-second wait...")
+			time.sleep(1)
+			
+			table = utils.parse_openstack_table(output)
+			ip = [entry['Value'] for entry in table if entry['Field'] == 'floating_ip_address'][0]
+			give_command('openstack server add floating ip %s %s' % (deploy_config['INSTANCE_NAME'], ip))
+			#print poll_output()
+			utils.print_pass("An upbound of 2-minute wait...")
+			# time.sleep(120)
+			timebound = 120
+			start_time = time.time()
+			while True:
+				# time bound
+				time_elapsed = time.time() - start_time
+				if time_elapsed >= timebound:
+					utils.print_warning("Instance '%s' may have failed to be associated with a floating ip!" % deploy_config['INSTANCE_NAME'])
+					break
+
+				# ping
+				give_command('ping -w 5 -c 1 %s' % ip)
+				output = poll_output(-1)
+				print output
+				rc = get_returncode()
+				if rc == 0:
+					break
+
+				time.sleep(1)
+
 
 ##########################
 ## console debug & demo ##
