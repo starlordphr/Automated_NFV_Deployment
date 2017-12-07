@@ -215,8 +215,9 @@ def get_returncode():
 		return output
 
 # timeout will be at least how long we will have to wait
-def poll_all_outputs(timeout=5000, init_wait=2000):
-	print "Please wait patiently as we're polling potential outputs..."
+def poll_all_outputs(timeout=5000, init_wait=2000, suppress_msg=False):
+	if not suppress_msg:
+		print "Please wait patiently as we're polling potential outputs..."
 
 	time.sleep(init_wait / 1000.0)
 
@@ -246,7 +247,7 @@ def responsive_poll(timeout=5000):
 # assumes all historical outputs are ready to send on child's stdout or stderr
 def clear_historical_outputs():
 	# just swiftly poll all outputs...
-	return poll_all_outputs(timeout=200, init_wait=0)
+	return poll_all_outputs(timeout=200, init_wait=0, suppress_msg=True)
 
 ###########################
 ## console command funcs ##
@@ -802,14 +803,14 @@ def create_server(vm_name, deploy_config):
 			print output
 			#utils.print_pass("30-second wait...")
 			time.sleep(1)
-			
+
 			table = utils.parse_openstack_table(output)
 			ip = [entry['Value'] for entry in table if entry['Field'] == 'floating_ip_address'][0]
 			give_command('openstack server add floating ip %s %s' % (deploy_config['INSTANCE_NAME'], ip))
 			#print poll_output()
-			utils.print_pass("An upbound of 2-minute wait...")
+			utils.print_pass("An upbound of 3-minute wait...")
 			# time.sleep(120)
-			timebound = 120
+			timebound = 180
 			start_time = time.time()
 			while True:
 				# time bound
@@ -819,12 +820,20 @@ def create_server(vm_name, deploy_config):
 					break
 
 				# ping
-				give_command('ping -w 5 -c 1 %s' % ip)
+				give_command('ping -w 15 -c 4 %s' % ip)
 				output = poll_output(-1)
-				print output
+				print "ping output:\n%s\n" % output
 				rc = get_returncode()
-				if rc == 0:
-					break
+				utils.print_highlight("Return code: %s" % rc)
+				if type(rc) == str:
+					# further ping message...
+					print rc
+					output = poll_all_outputs()
+					print output
+					rc = get_returncode()
+					utils.print_highlight("Return code: %s" % rc)
+					if rc == 0:
+						break
 
 				time.sleep(1)
 
