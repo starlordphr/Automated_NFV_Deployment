@@ -16,7 +16,7 @@ sudo apt-get update
 sudo apt-get -y upgrade
 
 # UI script dependencies
-sudo apt-get install -y python3-matplotlib
+sudo apt-get install -y python-matplotlib
 
 # Download and install python-openstackclient
 print-highlight "----- Setting up openstack..."
