@@ -46,5 +46,5 @@ set timeout -1
 spawn ./openair-cn/scripts/build_spgw -i
 match_max 100000
 expect -exact "Do you want to install libgtpnl ? <y/N> "
-send -- "n\r"
+send -- "y\r"
 expect eof

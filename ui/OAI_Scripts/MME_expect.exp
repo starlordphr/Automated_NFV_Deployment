@@ -50,7 +50,7 @@ sleep 3
 send -- "y\r"
 expect -exact "Do you want to install freeDiameter 1.2.0 ? <y/N> "
 sleep 3
-send -- "n\r"
+send -- "y\r"
 expect -exact "Do you want to install asn1c rev 1516 patched? <y/N> "
 sleep 3
 send -- "n\r"
