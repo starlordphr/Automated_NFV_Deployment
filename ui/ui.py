@@ -166,12 +166,18 @@ def main():
 	# create enb flavor if not present
 	flavor_list = [entry['ID'] for entry in flavor_table]
 	if 'enb' not in flavor_list:
+		give_command('echo $OS_USERNAME')
+		prev_username = poll_output(-1)
+		if len(prev_username) == 0:
+			raise RuntimeError("Unable to get environment variable: $OS_USERNAME")
+		print "Switching to openstack admin user..."
 		give_command('source openrc admin')
 		print poll_output()
 		print "Creating openstack flavor for eNodeB nodes..."
 		give_command('openstack flavor create --public enb_flavor --id enb --ram 4096 --disk 40 --vcpus 4')
 		print poll_output(-1)
-		give_command('source openrc')
+		print "Restoring previous openstack user: %s" % prev_username
+		give_command('source openrc %s' % prev_username)
 		print poll_output()
 
 	# process according to SLA specification
