@@ -206,6 +206,9 @@ def poll_output(timeout=5000):
 
 	return ""
 
+# returns output parsed to int
+# if output is empty, returns -1
+# if output cannot be parsed, prints a warning message and returns the original output
 def get_returncode():
 	clear_historical_outputs()
 	give_command("echo $?")
@@ -215,7 +218,7 @@ def get_returncode():
 	elif len(output) == 0:
 		return -1
 	else:
-		print "[WARNING] get_returncode() returned other output: %s" % output
+		utils.print_warning("[WARNING] get_returncode() returned other output: %s" % output)
 		return output
 
 # timeout will be at least how long we will have to wait

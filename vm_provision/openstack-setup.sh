@@ -24,6 +24,7 @@ sudo useradd -s /bin/bash -d /opt/stack -m stack
 echo "stack ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/stack
 chmod +x install-openstack.sh
 sudo cp install-openstack.sh /opt/stack
-sudo su - stack 	# will swtich user here
+#sudo su - stack 	# will swtich user here
+sudo -u stack -H sh -c "./install-openstack.sh"
 
 # call install-openstack.sh after switching user

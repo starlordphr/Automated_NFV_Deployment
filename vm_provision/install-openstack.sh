@@ -19,11 +19,10 @@ git clone https://git.openstack.org/openstack-dev/devstack
 mkdir .cache	# to prevent a common error
 cd devstack
 touch local.conf
-#passwd=uclawing
 echo "[[local|localrc]]" >> local.conf
 echo "ADMIN_PASSWORD=$passwd" >> local.conf
 echo "DATABASE_PASSWORD=$passwd" >> local.conf
 echo "RABBIT_PASSWORD=$passwd" >> local.conf
 echo "SERVICE_PASSWORD=$passwd" >> local.conf
-#echo "HOST_IP=192.168.1.118" >> local.conf  # no need for this
+#echo "enable_plugin ceilometer https://git.openstack.org/openstack/ceilometer.git master" >> local.conf
 ./stack.sh
