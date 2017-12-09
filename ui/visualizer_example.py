@@ -20,6 +20,8 @@ def main():
 		time.sleep(0.2)
 		gen_next_data()
 		visualizer.update_plot(data)
+		if visualizer.is_window_closed():
+			break
 
 if __name__ == '__main__':
 	main()

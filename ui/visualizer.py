@@ -66,6 +66,13 @@ def close_window():
 		plt.close()
 		is_open = False
 
+def is_window_closed():
+	if len(plt.get_fignums()) == 0:
+		is_open = False
+		return True
+	else:
+		return False
+
 def update_plot(data, footnote=None, padding=True):
 	global _curr_line, _footnote
 

@@ -1,1 +1,1 @@
-find . | grep -E "(\.py$)|(\.sh$)" | xargs wc -l
+find . | grep -E "(\.py$)|(\.sh$)" | sed -e 's/ /\\ /g' | xargs wc -l

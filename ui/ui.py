@@ -8,7 +8,7 @@ Arguments:
 '''
 
 import os, select, time, argparse, subprocess
-import configs, utils
+import configs, utils, visualizer
 
 ################
 ## child bash ##
@@ -54,6 +54,11 @@ commands = {
 				"\t%-8s%s" % ("ip", "shows a list of instance names mapped to floating ip\n") + \
 				"\t%-8s%s" % ("server", "shows list of servers"),
 		"func_name" : "list_things"
+	},
+	"visl" : {
+		"description" : "Visualize server usage",
+		"usage" : "visl instance_name",
+		"func_name" : "viz_usage"
 	},
 	"demo" : {
 		"description" : "Demonostrate how utils.parse_openstack_table() parse a table to a json object (for future developers)",
@@ -339,6 +344,14 @@ def list_things(args=[]):
 		print poll_output(-1)
 	else:
 		print "Illegal argument: %s" % args[0]
+
+def viz_usage(args=[]):
+	if len(args) != 1:
+		# wrong usage
+		show_help(['visl'])
+		return
+
+	print "This function is not implemented yet!"
 
 def usrcmd_deploy_vm(args=[]):
 	if len(args) != 1:
