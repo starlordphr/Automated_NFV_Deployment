@@ -26,40 +26,54 @@ git config --global user.email "prashanthrajput@ucla.edu"
 echo -n | openssl s_client -showcerts -connect gitlab.eurecom.fr:443 2>/dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-certificates.crt
 
 # Install USRP drivers
-#echo "----- Provision: Installing USRP drivers..."
-#sudo apt-get -y install libboost-all-dev libusb-1.0-0-dev python-mako doxygen python-docutils python-requests cmake build-essential
-#git clone git://github.com/EttusResearch/uhd.git
-#cd uhd; mkdir host/build; cd host/build
-#cmake -DCMAKE_INSTALL_PREFIX=/usr ..
-#make -j4
-#sudo make install
-#sudo ldconfig
-#sudo /usr/lib/uhd/utils/uhd_images_downloader.py
+echo "----- Provision: Installing USRP drivers..."
+sudo apt-get -y install libboost-all-dev libusb-1.0-0-dev python-mako doxygen python-docutils python-requests cmake build-essential
+git clone git://github.com/EttusResearch/uhd.git
+cd uhd; mkdir host/build; cd host/build
+cmake -DCMAKE_INSTALL_PREFIX=/usr ..
+make -j4
+sudo make install
+sudo ldconfig
+sudo /usr/lib/uhd/utils/uhd_images_downloader.py
 
 # Download & Extract Patches
-#echo "----- Provision: Downloading & Extracting Patches..."
-#cd ../../..
-#wget https://open-cells.com/d5138782a8739209ec5760865b1e53b0/opencells-mods-20170823.tgz
+echo "----- Provision: Downloading & Extracting Patches..."
+cd ../../..
+wget https://open-cells.com/d5138782a8739209ec5760865b1e53b0/opencells-mods-20170823.tgz
 #tar xf opencells-mods-20170823.tgz
 
 # Download & Compile the eNB on 17.04
 echo "----- Provision: Downloading & Compiling eNB..."
 git clone https://gitlab.eurecom.fr/oai/openairinterface5g.git
 cd openairinterface5g
-git checkout develop
-git reset --hard 17b9a9e917ce2a3a8c7004c7b9a221c350ddfe17
+git checkout 17b9a9e917ce2a3a8c7004c7b9a221c350ddfe17
 
 # Apply downloaded Patch
-#echo "----- Provision: Patching eNB..."
+echo "----- Provision: Patching eNB..."
 # IMPORTANT: This patch fails and all the further setups fail as they are interactive
 # Unlike apt I cannot pass -y as a flag to hss, mme and spgw
 # TODO: Find a solution to this
-#cd ..
-#cp opencells-mods/cmake_targets/tools/build_helper openairinterface5g/cmake_targets/tools/build_helper
-#cd openairinterface5g
-#git checkout develop
+cd ..
+cp opencells-mods/cmake_targets/tools/build_helper openairinterface5g/cmake_targets/tools/build_helper
+cd openairinterface5g
+git checkout 17b9a9e917ce2a3a8c7004c7b9a221c350ddfe17
 
 source oaienv
 ./cmake_targets/build_oai -I       # install SW packages from internet
-./cmake_targets/build_oai  -x -c --oaisim --UE # compile eNB
+./cmake_targets/build_oai  -w USRP --eNB --UE # compile eNB
 #./cmake_targets/build_oai  -w USRP --eNB # compile eNB
+
+cd ..
+git clone https://gitlab.eurecom.fr/oai/openair-cn.git
+cd openair-cn
+git checkout 724542d0b59797b010af8c5df15af7f669c1e838
+
+# Apply the patch
+echo "----- Provision: Patching OAI EPC..."
+git apply ../opencells-mods/EPC.patch
+source oaienv
+cd scripts
+./build_hss -i
+./build_mme -i
+./build_spgw -i
+
