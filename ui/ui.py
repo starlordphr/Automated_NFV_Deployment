@@ -7,7 +7,7 @@ Arguments:
 
 '''
 
-import os, sys, select, time, argparse, traceback, subprocess
+import os, sys, select, time, argparse, readline, traceback, subprocess
 import configs, utils, visualizer
 
 ################
@@ -196,14 +196,14 @@ def main():
 
 
 	# process according to SLA specification
-	print "Processing SLA configuration..."
+	if len(configs.sla_configs) != 0:
+		print "Processing SLA configuration..."
 	for vm in configs.sla_configs:
 		deploy_vm(vm)
 
 	# user console
 	while console_running:
-		print '$',
-		user_args = raw_input().split()
+		user_args = raw_input('$ ').split()
 
 		if len(user_args) > 0:
 			try:
