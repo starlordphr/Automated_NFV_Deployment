@@ -80,6 +80,15 @@ commands = {
 				"\tDelete all VMs in current configuration\n" + \
 				"* HINT: You can check current configuration by using 'conf' command",
 		"func_name" : "usrcmd_delete_vm"
+	},
+	"snapshot" : {
+		"description" : "Create and replace snapshots of VM instances",
+		"usage" : "snapshot option\noptions:\n" + \
+				"\t%-40s%s" % ("list", "List images\n") + \
+				"\t%-40s%s" % ("create instance_name snapshot_name", "Create a snapshot of an instance\n") + \
+				"\t%-40s%s" % ("delete snapshot_name", "Delete a snapshot of an instance\n") + \
+				"\t%-40s%s" % ("replace instance_name snapshot_name", "Replace a current VM with a snapshot"),
+		"func_name" : "usrcmd_snapshot"
 	}
 }
 console_running = True
@@ -164,7 +173,7 @@ def main():
 			raise RuntimeError("Openstack is not up! Please make sure you have executed 'stack.sh' as stack user!")
 
 	# create enb flavor if not present
-	flavor_list = [entry['ID'] for entry in flavor_table]
+	'''flavor_list = [entry['ID'] for entry in flavor_table]
 	if 'enb' not in flavor_list:
 		give_command('source openrc admin')
 		print poll_output()
@@ -172,7 +181,7 @@ def main():
 		give_command('openstack flavor create --public enb_flavor --id enb --ram 4096 --disk 40 --vcpus 4')
 		print poll_output(-1)
 		give_command('source openrc')
-		print poll_output()
+		print poll_output()'''
 
 	# process according to SLA specification
 	print "Processing SLA configuration..."
@@ -344,6 +353,82 @@ def list_things(args=[]):
 		print poll_output(-1)
 	else:
 		print "Illegal argument: %s" % args[0]
+
+
+def usrcmd_snapshot(args=[]):
+	if len(args) < 1:
+		# wrong usage
+		show_help(['snapshot'])
+		return
+
+
+	if args[0] == 'list':
+		give_command("openstack image list")
+		print poll_output(-1)
+
+	elif args[0] == 'create':
+		if len(args) != 3:
+			print "Please specify the arguments"
+		else:
+			give_command('openstack server show %s' % args[1])
+			output = poll_output(-1)
+			if output == "No server with a name or ID of '%s' exists." % args[1]:
+				print "Specify a correct server name"
+				return
+			else:
+				table, output = get_table('openstack server list', both=True)
+				server_id = [entry for entry in table if entry['Name'] == args[1]][0]['ID']
+
+
+				print "Creating snapshot"
+				give_command('nova image-create %s "%s"' % (server_id, args[2]))
+				time.sleep(2)
+
+				timebound = 60
+				should_proceed = True
+				start_time = time.time()
+				while True:
+					# time bound
+					time_elapsed = time.time() - start_time
+					if time_elapsed >= timebound:
+						utils.print_warning("Giving up on waiting for snapshot '%s' to become active..." % args[2])
+						break
+
+					# check server status
+					print "Checking status for snapshot '%s'..." % args[2]
+					table, output = get_table('openstack image list', both=True)
+					if table != None:
+						status = [entry for entry in table if entry['Name'] == args[2]][0]['Status']
+						print "Status: %s" % status
+						if status == 'active':
+							utils.print_pass("Snapshot '%s' successfully created!" % args[2])
+							break
+					elif status == 'error':
+							should_proceed = False
+							utils.print_error("Snapshot '%s' is in ERROR state!" % args[2])
+							break
+
+					time.sleep(5)
+
+	elif args[0] == 'delete':
+		if len(args) != 2:
+			print "Please specify the arguments"
+
+		give_command('openstack image show %s' % args[1])
+		output = poll_output(-1)
+		poll_all_outputs()
+		if output == "Could not find resource %s" % args[1]:
+			print "Image does not exist"
+			return
+		else:
+			give_command('openstack image delete %s' % args[1])
+			print "Snapshot deleted"
+
+
+	else:
+		print "Illegal argument: %s" % args[0]
+		show_help(['snapshot'])
+		return
 
 def viz_usage(args=[]):
 	if len(args) != 1:
