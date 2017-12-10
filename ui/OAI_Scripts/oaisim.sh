@@ -47,6 +47,7 @@ echo "----- Provision: Downloading & Compiling eNB..."
 git clone https://gitlab.eurecom.fr/oai/openairinterface5g.git
 cd openairinterface5g
 git checkout develop
+git reset --hard 17b9a9e917ce2a3a8c7004c7b9a221c350ddfe17
 
 # Apply downloaded Patch
 #echo "----- Provision: Patching eNB..."
