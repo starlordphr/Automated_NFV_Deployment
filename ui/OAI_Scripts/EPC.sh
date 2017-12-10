@@ -41,7 +41,6 @@ echo -n | openssl s_client -showcerts -connect gitlab.eurecom.fr:443 2>/dev/null
 
 # Download & Extract Patches
 echo "----- Provision: Downloading & Extracting Patches..."
-cd ../../..
 wget https://open-cells.com/d5138782a8739209ec5760865b1e53b0/opencells-mods-20170823.tgz
 tar xf opencells-mods-20170823.tgz
 
