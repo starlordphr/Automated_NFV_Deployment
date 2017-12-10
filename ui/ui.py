@@ -173,7 +173,7 @@ def main():
 			raise RuntimeError("Openstack is not up! Please make sure you have executed 'stack.sh' as stack user!")
 
 	# create enb flavor if not present
-	'''flavor_list = [entry['ID'] for entry in flavor_table]
+	flavor_list = [entry['ID'] for entry in flavor_table]
 	if 'enb' not in flavor_list:
 		give_command('echo $OS_USERNAME')
 		prev_username = poll_output(-1)
@@ -185,14 +185,11 @@ def main():
 		print "Creating openstack flavor for eNodeB nodes..."
 		give_command('openstack flavor create --public enb_flavor --id enb --ram 4096 --disk 40 --vcpus 4')
 		print poll_output(-1)
-<<<<<<< HEAD
-		give_command('source openrc')
-		print poll_output()'''
-=======
+
 		print "Restoring previous openstack user: %s" % prev_username
 		give_command('source openrc %s' % prev_username)
 		print poll_output()
->>>>>>> ef9b37bdbddb35a2063604bb681450ccebcb1f59
+
 
 	# process according to SLA specification
 	print "Processing SLA configuration..."
