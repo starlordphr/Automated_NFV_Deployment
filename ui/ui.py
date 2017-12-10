@@ -7,7 +7,7 @@ Arguments:
 
 '''
 
-import os, select, time, argparse, subprocess
+import os, sys, select, time, argparse, traceback, subprocess
 import configs, utils, visualizer
 
 ################
@@ -63,6 +63,10 @@ commands = {
 	"demo" : {
 		"description" : "Demonostrate how utils.parse_openstack_table() parse a table to a json object (for future developers)",
 		"func_name" : "demo_parse_table"
+	},
+	"gtfo" : {
+		"description" : "(For testing) Raise an error on console ui",
+		"func_name" : "force_quit_jk"
 	},
 	"deploy" : {
 		"description" : "Deploy (more) VMs by given SLA file",
@@ -197,8 +201,11 @@ def main():
 				func = get_cmd_func(cmd)
 				if func != None:
 					func(cmd_args)
-			except Exception as valerr:
-				utils.print_error("Encountered error in command execution!! Error message:\n%s" % valerr)
+			except:
+				# print in red color
+				print utils.bcolors.RED,
+				traceback.print_exc(file=sys.stdout)
+				print utils.bcolors.NC
 
 ##############################
 ## child bash communication ##
@@ -297,6 +304,9 @@ def exit_console(args=[]):
 	give_command("exit")
 	time.sleep(0.25)
 	# waitpid?
+
+def force_quit_jk(args=[]):
+	raise RuntimeError("No, you can't.")
 
 def show_config(args=[]):
 	print utils.format_dict(configs.sla_configs)
