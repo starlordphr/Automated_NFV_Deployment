@@ -22,8 +22,6 @@ polling_pool = None
 
 home_dir = ""
 
-# TODO: maybe set up another thread for polling output??
-
 #############
 ## console ##
 #############
@@ -55,19 +53,15 @@ commands = {
 				"\t%-8s%s" % ("server", "shows list of servers"),
 		"func_name" : "list_things"
 	},
-	"visl" : {
-		"description" : "Visualize server usage",
-		"usage" : "visl instance_name",
-		"func_name" : "viz_usage"
-	},
-	"demo" : {
-		"description" : "Demonostrate how utils.parse_openstack_table() parse a table to a json object (for future developers)",
-		"func_name" : "demo_parse_table"
-	},
-	"gtfo" : {
-		"description" : "(For testing) Raise an error on console ui",
-		"func_name" : "force_quit_jk"
-	},
+	# "visl" : {
+	# 	"description" : "Visualize server usage",
+	# 	"usage" : "visl instance_name",
+	# 	"func_name" : "viz_usage"
+	# },
+	# "demo" : {
+	# 	"description" : "Demonostrate how utils.parse_openstack_table() parse a table to a json object (for future developers)",
+	# 	"func_name" : "demo_parse_table"
+	# },
 	"deploy" : {
 		"description" : "Deploy (more) VMs by given SLA file",
 		"usage" : "deploy sla_file_name",
@@ -213,7 +207,7 @@ def main():
 				if func != None:
 					func(cmd_args)
 			except:
-				# print in red color
+				# print the stack in red color
 				print utils.bcolors.RED,
 				traceback.print_exc(file=sys.stdout)
 				print utils.bcolors.NC
@@ -315,9 +309,6 @@ def exit_console(args=[]):
 	give_command("exit")
 	time.sleep(0.25)
 	# waitpid?
-
-def force_quit_jk(args=[]):
-	raise RuntimeError("No, you can't.")
 
 def show_config(args=[]):
 	print utils.format_dict(configs.sla_configs)
