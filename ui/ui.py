@@ -591,7 +591,10 @@ def configure_oai(vm_name, vm_type, oai_configs):
 		# oai_configs[oai_opt] = {}	--> dict for possible params in the future
 		if oai_opt == "eNodeB":
 			for fname in ['eNodeB.sh', 'enb.conf']:
-				source_file_path.append(base_path_src + fname)
+				tmp_fname = base_path_src + fname
+				if fname == 'enb.conf':
+					tmp_fname = create_temp_oai_conf(tmp_fname, oai_configs[oai_opt])
+				source_file_path.append(tmp_fname)
 				destination_file_path.append(base_path_dst + fname)
 		elif oai_opt == "ue":
 			for fname in ['UE.sh', 'ue.conf']:
@@ -621,6 +624,8 @@ def configure_oai(vm_name, vm_type, oai_configs):
 		scp_command(source_file_path, destination_file_path)
 		time.sleep(0.5)
 
+		rc = subprocess.call(['rm', '-f', base_path_src + "*.tmp"])
+
 		'''
 		command_to_run = 'pidof apt-get | xargs kill -9'
 		ssh_command(command_to_run)
@@ -629,6 +634,14 @@ def configure_oai(vm_name, vm_type, oai_configs):
 		command_to_run = 'sudo bash %s' % destination_file_path
 		ssh_command(command_to_run)
 		'''
+
+# returns file name of the modified configuration
+def create_temp_oai_conf(fname, oai_config):
+	tmp_fname = "%s.tmp" % fname
+	for conf_name in oai_config:
+		os.system("sed -i 's/.*%s.*/%s = %s;/g' %s" % (conf_name, conf_name, oai_config[conf_name], tmp_fname))
+
+	return tmp_fname
 
 def ssh_command(command_to_run):
 
