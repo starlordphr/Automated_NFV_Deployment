@@ -831,8 +831,7 @@ def create_server(vm_name, deploy_config):
 			# check server status
 			print "Checking status for server '%s'..." % deploy_config['INSTANCE_NAME']
 			give_command('openstack server show %s' % deploy_config['INSTANCE_NAME'])
-			output = poll_output(-1)
-			poll_all_outputs()
+			output = poll_all_outputs()
 			table = utils.parse_openstack_table(output)
 			if table != None:
 				row = [entry for entry in table if entry['Field'] == 'status'][0]
