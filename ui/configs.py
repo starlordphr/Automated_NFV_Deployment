@@ -26,12 +26,8 @@ SERVER_CONFIG = {
 }
 
 OAI_CONFIGS = {
-	'eNodeB' : {
-		'TIME_ZONE' : "optional"
-	},
-	'ue' : {
-		'TIME_ZONE' : "optional"
-	},
+	'eNodeB' : {},
+	'ue' : {},
 	'hss' : {},
 	'mme' : {},
 	'spgw' : {},
@@ -131,11 +127,15 @@ def _get_oai_configs(vm_name):
 			if len(_cfg.options(sect)) == 0:
 				ret[oai_opt] = {}
 			else:
-				conf = dict(OAI_CONFIGS[oai_opt])
+				# conf = dict(OAI_CONFIGS[oai_opt])
+				# for opt in conf:
+				# 	data_type, optional = _opt_of_opt(conf[opt])
+				# 	conf[opt] = _try_get_option(sect, opt, data_type, optional)
 
-				for opt in conf:
-					data_type, optional = _opt_of_opt(conf[opt])
-					conf[opt] = _try_get_option(sect, opt, data_type, optional)
+				# reads whatever options user specifies
+				conf = {}
+				for opt in _cfg.options(sect):
+					conf[opt] = _try_get_option(sect, opt)
 
 				ret[oai_opt] = conf
 

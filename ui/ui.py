@@ -638,8 +638,13 @@ def configure_oai(vm_name, vm_type, oai_configs):
 # returns file name of the modified configuration
 def create_temp_oai_conf(fname, oai_config):
 	tmp_fname = "%s.tmp" % fname
+	subprocess.call(['cp', fname, tmp_fname])
 	for conf_name in oai_config:
-		os.system("sed -i 's/.*%s.*/%s = %s;/g' %s" % (conf_name, conf_name, oai_config[conf_name], tmp_fname))
+		cmd = "sed -i 's/.*%s.*/%s = %s;/g' %s" % (conf_name, conf_name, oai_config[conf_name], tmp_fname)
+		print cmd
+		os.system(cmd)
+		# subprocess.call(['sed', '-i',
+		# 	"'s/.*%s.*/%s = %s;/g'" % (conf_name, conf_name, oai_config[conf_name]), tmp_fname])
 
 	return tmp_fname
 
