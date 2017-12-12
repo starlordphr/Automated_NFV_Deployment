@@ -72,10 +72,10 @@ commands = {
 		"usage" : "delete --vm vm_name\n" + \
 				"\tDelete VM of given VM name. Must be in current configuration.\n" + \
 				"delete --instance instance_name [--key key_name]\n" + \
-				"\tDelete server instance by explicitly giving instance and key name." + \
+				"\tDelete server instance by explicitly giving instance and key name. " + \
 				"If key name isn't given, use default key name.\n" + \
 				"delete --all\n" + \
-				"\tDelete all VMs in current configuration\n" + \
+				"\tDelete all VMs configured in the current session\n" + \
 				"* HINT: You can check current configuration by using 'conf' command",
 		"func_name" : "usrcmd_delete_vm"
 	}
@@ -614,33 +614,65 @@ def configure_oai(vm_name, vm_type, oai_configs):
 				tmp_fname = base_path_src + fname
 				if fname == 'enb.conf':
 					tmp_fname = create_temp_oai_conf(tmp_fname, oai_configs[oai_opt])
+				
 				source_file_path.append(tmp_fname)
 				destination_file_path.append(base_path_dst + fname)
+				
 				remove_list.append(tmp_fname)
 		elif oai_opt == "ue":
 			for fname in ['UE.sh', 'ue.conf']:
+				tmp_fname = base_path_src + fname
+				if fname == 'ue.conf':
+					tmp_fname = create_temp_oai_conf(tmp_fname, oai_configs[oai_opt])
+				
 				source_file_path.append(base_path_src + fname)
 				destination_file_path.append(base_path_dst + fname)
+				
+				remove_list.append(tmp_fname)
 		elif oai_opt == "eNodeB_ue":
 			for fname in ['UE_eNodeB.sh', 'enb.conf']:
+				tmp_fname = base_path_src + fname
+				if fname == 'enb.conf':
+					tmp_fname = create_temp_oai_conf(tmp_fname, oai_configs[oai_opt])
+				
 				source_file_path.append(base_path_src + fname)
 				destination_file_path.append(base_path_dst + fname)
+
+				remove_list.append(tmp_fname)
 		elif oai_opt == "hss":
 			for fname in ['HSS.sh', 'hss.conf']:
+				tmp_fname = base_path_src + fname
+				if fname == 'hss.conf':
+					tmp_fname = create_temp_oai_conf(tmp_fname, oai_configs[oai_opt])
+
 				source_file_path.append(base_path_src + fname)
 				destination_file_path.append(base_path_dst + fname)
+
+				remove_list.append(tmp_fname)
 		elif oai_opt == "mme":
 			for fname in ['MME.sh', 'mme.conf']:
+				tmp_fname = base_path_src + fname
+				if fname == 'mme.conf':
+					tmp_fname = create_temp_oai_conf(tmp_fname, oai_configs[oai_opt])
+
 				source_file_path.append(base_path_src + fname)
 				destination_file_path.append(base_path_dst + fname)
+
+				remove_list.append(tmp_fname)
 		elif oai_opt == "spgw":
 			for fname in ['SPGW.sh', 'spgw.conf']:
+				tmp_fname = base_path_src + fname
+				if fname == 'spgw.conf':
+					tmp_fname = create_temp_oai_conf(tmp_fname, oai_configs[oai_opt])
+
 				source_file_path.append(base_path_src + fname)
 				destination_file_path.append(base_path_dst + fname)
+
+				remove_list.append(tmp_fname)
 		elif oai_opt == "epc":
 			for fname in ['EPC.sh', 'hss.conf', 'mme.conf', 'spgw.conf', '*_expect.exp']:
 				source_file_path.append(base_path_src + fname)
-				destination_file_path.append(base_path_dst) # + fname)
+				destination_file_path.append(base_path_dst)
 
 		scp_command(source_file_path, destination_file_path)
 		time.sleep(0.5)
