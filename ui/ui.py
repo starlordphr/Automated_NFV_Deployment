@@ -42,7 +42,7 @@ commands = {
 		"func_name" : "show_config"
 	},
 	"exec" : {
-		"description" : "Send a command to child bash and execute it",
+		"description" : "(Dev mode only) Send a command to child bash and execute it",
 		"usage" : "exec command",
 		"func_name" : "send_cmd_and_exec"
 	},
@@ -58,10 +58,10 @@ commands = {
 	# 	"usage" : "visl instance_name",
 	# 	"func_name" : "viz_usage"
 	# },
-	# "demo" : {
-	# 	"description" : "Demonostrate how utils.parse_openstack_table() parse a table to a json object (for future developers)",
-	# 	"func_name" : "demo_parse_table"
-	# },
+	"demo" : {
+		"description" : "(Dev mode only) Demonostrate how utils.parse_openstack_table() parse a table to a json object",
+		"func_name" : "demo_parse_table"
+	},
 	"deploy" : {
 		"description" : "Deploy (more) VMs by given SLA file",
 		"usage" : "deploy sla_file_name",
@@ -81,6 +81,7 @@ commands = {
 	}
 }
 console_running = True
+dev_mode = False
 src_dir = ""
 work_dir = ""
 
@@ -91,7 +92,7 @@ ip = ""
 command_to_run = ""
 
 def main():
-	global polling_pool
+	global polling_pool, dev_mode
 
 	# parse args
 	args = parse_args()
@@ -100,6 +101,9 @@ def main():
 	# will raise exception if input is ill-formatted
 	if args.sla != None:
 		configs.parse_sla_config(args.sla)
+
+	dev_mode = args.dev_mode
+	print "Developer mode: %s" % ("ON" if dev_mode else "OFF")
 
 	# fork child bash
 	pid = os.fork()
@@ -306,6 +310,10 @@ def show_config(args=[]):
 	print utils.format_dict(configs.sla_configs)
 
 def send_cmd_and_exec(args=[]):
+	if not dev_mode:
+		print "exec: this command is for dev mode only"
+		return
+
 	if len(args) == 0:
 		# wrong usage
 		show_help(['exec'])
@@ -407,6 +415,8 @@ def parse_args():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--sla', action='store', required=False,
 		metavar='SLA_config_file', help='specify SLA config file')
+	parser.add_argument('--dev-mode', action='store_true', required=False,
+		help='enable developer mode commands')
 	args = parser.parse_args()
 	return args
 
@@ -594,6 +604,7 @@ def configure_oai(vm_name, vm_type, oai_configs):
 	destination_file_path = []
 	base_path_src = '%s/OAI_Scripts/' % src_dir
 	base_path_dst = '/home/ubuntu/'
+	remove_list = []
 
 	for oai_opt in oai_configs:
 		# oai_opt = eNodeB, ue, eNodeB_ue, hss, mme, spgw
@@ -605,6 +616,7 @@ def configure_oai(vm_name, vm_type, oai_configs):
 					tmp_fname = create_temp_oai_conf(tmp_fname, oai_configs[oai_opt])
 				source_file_path.append(tmp_fname)
 				destination_file_path.append(base_path_dst + fname)
+				remove_list.append(tmp_fname)
 		elif oai_opt == "ue":
 			for fname in ['UE.sh', 'ue.conf']:
 				source_file_path.append(base_path_src + fname)
@@ -633,7 +645,8 @@ def configure_oai(vm_name, vm_type, oai_configs):
 		scp_command(source_file_path, destination_file_path)
 		time.sleep(0.5)
 
-		rc = subprocess.call(['rm', '-f', base_path_src + "*.tmp"])
+		for f in remove_list:
+			subprocess.call(['rm', '-f', f])
 
 		'''
 		command_to_run = 'pidof apt-get | xargs kill -9'
@@ -915,6 +928,10 @@ def create_server(vm_name, deploy_config):
 ##########################
 
 def demo_parse_table(args=[]):
+	if not dev_mode:
+		print "demo: this command is for dev mode only"
+		return
+
 	print "Command: openstack flavor list"
 	print "Waiting for response..."
 	give_command('openstack flavor list')
