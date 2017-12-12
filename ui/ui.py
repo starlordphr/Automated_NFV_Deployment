@@ -604,7 +604,6 @@ def configure_oai(vm_name, vm_type, oai_configs):
 	destination_file_path = []
 	base_path_src = '%s/OAI_Scripts/' % src_dir
 	base_path_dst = '/home/ubuntu/'
-	remove_list = []
 
 	for oai_opt in oai_configs:
 		# oai_opt = eNodeB, ue, eNodeB_ue, hss, mme, spgw
@@ -617,8 +616,6 @@ def configure_oai(vm_name, vm_type, oai_configs):
 				
 				source_file_path.append(tmp_fname)
 				destination_file_path.append(base_path_dst + fname)
-				
-				remove_list.append(tmp_fname)
 		elif oai_opt == "ue":
 			for fname in ['UE.sh', 'ue.conf']:
 				tmp_fname = base_path_src + fname
@@ -627,8 +624,6 @@ def configure_oai(vm_name, vm_type, oai_configs):
 				
 				source_file_path.append(base_path_src + fname)
 				destination_file_path.append(base_path_dst + fname)
-				
-				remove_list.append(tmp_fname)
 		elif oai_opt == "eNodeB_ue":
 			for fname in ['UE_eNodeB.sh', 'enb.conf']:
 				tmp_fname = base_path_src + fname
@@ -637,8 +632,6 @@ def configure_oai(vm_name, vm_type, oai_configs):
 				
 				source_file_path.append(base_path_src + fname)
 				destination_file_path.append(base_path_dst + fname)
-
-				remove_list.append(tmp_fname)
 		elif oai_opt == "hss":
 			for fname in ['HSS.sh', 'hss.conf']:
 				tmp_fname = base_path_src + fname
@@ -647,8 +640,6 @@ def configure_oai(vm_name, vm_type, oai_configs):
 
 				source_file_path.append(base_path_src + fname)
 				destination_file_path.append(base_path_dst + fname)
-
-				remove_list.append(tmp_fname)
 		elif oai_opt == "mme":
 			for fname in ['MME.sh', 'mme.conf']:
 				tmp_fname = base_path_src + fname
@@ -657,8 +648,6 @@ def configure_oai(vm_name, vm_type, oai_configs):
 
 				source_file_path.append(base_path_src + fname)
 				destination_file_path.append(base_path_dst + fname)
-
-				remove_list.append(tmp_fname)
 		elif oai_opt == "spgw":
 			for fname in ['SPGW.sh', 'spgw.conf']:
 				tmp_fname = base_path_src + fname
@@ -667,8 +656,6 @@ def configure_oai(vm_name, vm_type, oai_configs):
 
 				source_file_path.append(base_path_src + fname)
 				destination_file_path.append(base_path_dst + fname)
-
-				remove_list.append(tmp_fname)
 		elif oai_opt == "epc":
 			for fname in ['EPC.sh', 'hss.conf', 'mme.conf', 'spgw.conf', '*_expect.exp']:
 				source_file_path.append(base_path_src + fname)
@@ -676,9 +663,6 @@ def configure_oai(vm_name, vm_type, oai_configs):
 
 		scp_command(source_file_path, destination_file_path)
 		time.sleep(0.5)
-
-		for f in remove_list:
-			subprocess.call(['rm', '-f', f])
 
 		'''
 		command_to_run = 'pidof apt-get | xargs kill -9'
