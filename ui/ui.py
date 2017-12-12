@@ -145,10 +145,8 @@ def main():
 			utils.print_warning("[WARNING] An error occurred when checking RAM. Please check available RAM by yourself.")
 		elif free_ram < 4096:
 			utils.print_error("WARNING!!! Less than 4GB of RAM available!")
-			# too long (lol)
-			print "%s %s %s" % ("It is recommended to have at least 4GB of free RAM for VM deployment.",
-				"Insufficient RAM may result in deployment error.",
-				"Do you wish to continue (y/n)?"),
+			print "It is recommended to have at least 4GB of free RAM for VM deployment. " + \
+				"Insufficient RAM may result in deployment error. Do you wish to continue (y/n)?"
 			s = raw_input()
 			if s[0].lower() == 'n':
 				raise SystemExit("Aborted.")
@@ -672,6 +670,9 @@ def configure_oai(vm_name, vm_type, oai_configs):
 		command_to_run = 'sudo bash %s' % destination_file_path
 		ssh_command(command_to_run)
 		'''
+	
+	subprocess.call(['rm', '-f', base_path_src + "*.tmp"])
+
 
 # returns file name of the modified configuration
 def create_temp_oai_conf(fname, oai_config):
