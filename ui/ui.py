@@ -81,6 +81,7 @@ commands = {
 	}
 }
 console_running = True
+src_dir = ""
 work_dir = ""
 
 # new variables
@@ -410,17 +411,25 @@ def parse_args():
 	return args
 
 def init():
-	global home_dir, work_dir
+	global home_dir, work_dir, src_dir
 	print "Initialzing console..."
 
-	# get working directory of THIS SCRIPT (do not confuse)
 	work_dir = subprocess.check_output(['pwd']).strip()
+	src_dir = subprocess.check_output(['find', work_dir, '-name', 'ui.py']).strip()
+	src_dir = '/'.join(src_dir.split('/')[:-1]) + '/'
 
 	give_command('sudo su - stack')
 	give_command('pwd')
 	home_dir = poll_output(timeout=1000)
 	if len(home_dir) == 0:
 		raise RuntimeError("[ERROR] Could not get home directory. Please restart and try again.")
+
+	# work_dir is directory from which user launches this script
+	# child bash's working directory is $home_dir/devstack
+	print "Working directory: %s" % work_dir
+	print "Source script's directory: %s" % src_dir
+	print "Stack user's directory: %s" % home_dir
+
 	give_command('cd devstack')
 	give_command('source openrc')    # may have output
 	print poll_output(timeout=2000)
@@ -583,7 +592,7 @@ def configure_oai(vm_name, vm_type, oai_configs):
 	global command_to_run
 	source_file_path = []
 	destination_file_path = []
-	base_path_src = '%s/OAI_Scripts/' % work_dir
+	base_path_src = '%s/OAI_Scripts/' % src_dir
 	base_path_dst = '/home/ubuntu/'
 
 	for oai_opt in oai_configs:

@@ -1,2 +1,1 @@
-cd ui
-sudo python ui.py
+sudo python ui/ui.py $*
